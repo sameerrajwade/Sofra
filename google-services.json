@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "939272773354",
+    "project_id": "familywin-35a97",
+    "storage_bucket": "familywin-35a97.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:939272773354:android:be6e509bdd8c9043704193",
+        "android_client_info": {
+          "package_name": "com.familywin.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "939272773354-46k37sac2dqghvsa3jmtu3ark88f2eoo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.familywin.app",
+            "certificate_hash": "b00f1e01907cc4ed3132193eb3c039573199dd34"
+          }
+        },
+        {
+          "client_id": "939272773354-11lg42mo2i4uf42h2cga19ikrugd07mj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDV51QdYLOyFqs43l-0snVk61AeILcbst0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "939272773354-11lg42mo2i4uf42h2cga19ikrugd07mj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "939272773354-pe6pu2klmih6shl8801hi3n761v3ed19.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.familywin.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
