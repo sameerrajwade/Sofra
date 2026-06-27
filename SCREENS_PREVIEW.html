@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThaliPlan — All Screens Preview</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff;padding:40px 20px}
+h1{text-align:center;font-size:28px;font-weight:500;margin-bottom:8px}
+.subtitle{text-align:center;color:#9E9EB0;font-size:14px;margin-bottom:40px}
+.screen-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:40px;max-width:1400px;margin:0 auto}
+.screen-wrapper{display:flex;flex-direction:column;align-items:center;gap:12px}
+.screen-label{color:#9E9EB0;font-size:13px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase}
+.phone{width:375px;height:812px;background:#F5F5FA;border-radius:40px;overflow:hidden;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.4);border:3px solid #333}
+.phone-inner{height:100%;overflow-y:auto;padding:0;scrollbar-width:none}
+.phone-inner::-webkit-scrollbar{display:none}
+.status-bar{height:44px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 24px;font-size:12px;font-weight:600;color:#1A1A2E}
+.screen-content{padding:16px;background:#F5F5FA;min-height:calc(100% - 44px - 56px)}
+.bot-nav{position:sticky;bottom:0;background:#fff;display:flex;justify-content:space-around;padding:8px 0 20px;border-top:1px solid #E0E0EC}
+.bot-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:#9E9EB0}
+.bot-nav-item.active{color:#534AB7}
+.bot-nav-item i{font-size:22px}
+
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:0.5px solid #E0E0EC}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.metric{background:#F0EFF5;border-radius:10px;padding:12px}
+.metric-label{font-size:11px;color:#6B6B80;margin-bottom:4px}
+.metric-value{font-size:22px;font-weight:600;color:#1A1A2E}
+.metric-trend{font-size:10px;margin-top:3px}
+.trend-up{color:#2E7D32}
+.trend-down{color:#D32F2F}
+
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500}
+.badge-home{background:#E8F7F1;color:#1D9E75}
+.badge-takeout{background:#FFF4E0;color:#b07a10}
+.badge-dineout{background:#FDECE6;color:#D85A30}
+.badge-cuisine{background:#EEEDFE;color:#534AB7}
+.badge-new{background:#534AB7;color:#fff}
+.badge-frequent{background:#FDECE6;color:#D32F2F}
+
+.section-title{font-size:15px;font-weight:600;color:#1A1A2E;margin-bottom:10px}
+.text-sm{font-size:12px}
+.text-xs{font-size:10px}
+.text-muted{color:#9E9EB0}
+.text-secondary{color:#6B6B80}
+.text-primary{color:#1A1A2E}
+.text-purple{color:#534AB7}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;border:1px solid #E0E0EC;background:#fff;color:#1A1A2E;cursor:pointer}
+.btn-primary{background:#534AB7;color:#fff;border-color:#534AB7}
+.btn-outline{background:transparent;border:1px solid #E0E0EC}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.btn-block{width:100%;justify-content:center}
+
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:500;background:#F0EFF5;color:#6B6B80}
+.chip-active{background:#EEEDFE;color:#534AB7}
+.chip-green{background:#E8F7F1;color:#1D9E75}
+
+.input{width:100%;padding:10px 12px;border:1px solid #E0E0EC;border-radius:10px;font-size:14px;background:#fff;color:#1A1A2E;outline:none}
+.input:focus{border-color:#534AB7}
+.input-label{font-size:12px;color:#6B6B80;margin-bottom:4px;display:block}
+
+.toggle-row{display:flex;gap:6px;margin-bottom:12px}
+.toggle-btn{flex:1;padding:8px;border-radius:8px;text-align:center;font-size:12px;font-weight:500;border:1px solid #E0E0EC;background:#fff;color:#6B6B80;cursor:pointer}
+.toggle-btn.active{background:#EEEDFE;color:#534AB7;border-color:#534AB7}
+.toggle-btn.active-home{background:#E8F7F1;color:#1D9E75;border-color:#1D9E75}
+.toggle-btn.active-takeout{background:#FFF4E0;color:#b07a10;border-color:#EF9F27}
+.toggle-btn.active-dineout{background:#FDECE6;color:#D85A30;border-color:#D85A30}
+
+.cal-grid{display:grid;grid-template-columns:50px 1fr 1fr;border:0.5px solid #E0E0EC;border-radius:12px;overflow:hidden;background:#fff}
+.cal-header{background:#F0EFF5;padding:8px;text-align:center;font-size:11px;font-weight:600;color:#6B6B80;border-bottom:0.5px solid #E0E0EC}
+.cal-day{padding:8px 6px;text-align:center;border-bottom:0.5px solid #E0E0EC}
+.cal-day-name{font-size:9px;color:#9E9EB0;text-transform:uppercase}
+.cal-day-num{font-size:14px;font-weight:600;color:#1A1A2E}
+.cal-cell{padding:6px 8px;border-bottom:0.5px solid #E0E0EC;border-left:0.5px solid #E0E0EC;font-size:11px}
+.cal-cell .dish{font-weight:500;color:#1A1A2E;margin-top:3px}
+.cal-today{background:#EEEDFE}
+.cal-today .cal-day-num{color:#534AB7}
+
+.dish-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid #E0E0EC}
+.dish-row:last-child{border-bottom:none}
+
+.rest-row{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:6px;border:0.5px solid #E0E0EC}
+
+.plan-row{display:grid;grid-template-columns:42px 1fr 1fr 28px;gap:6px;align-items:center;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:6px;border:0.5px solid #E0E0EC}
+
+.bar-track{height:6px;background:#F0EFF5;border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+
+.stacked-bar{display:flex;height:20px;border-radius:10px;overflow:hidden;margin-bottom:6px}
+
+.history-row{display:grid;grid-template-columns:54px 1fr 1fr;border:0.5px solid #E0E0EC;border-radius:10px;overflow:hidden;margin-bottom:6px;background:#fff}
+.history-date{padding:8px 4px;text-align:center}
+.history-cell{padding:6px 10px;border-left:0.5px solid #E0E0EC}
+
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #E0E0EC}
+.setting-row:last-child{border-bottom:none}
+
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;color:#fff}
+
+.info-banner{background:#EEEDFE;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.info-banner i{color:#534AB7;font-size:16px}
+.info-banner p{font-size:11px;color:#534AB7}
+
+.warn-banner{background:#FFF4E0;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.warn-banner i{color:#b07a10;font-size:16px}
+.warn-banner p{font-size:12px;color:#b07a10}
+
+.alert-banner{background:#FDECE6;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-top:10px}
+.alert-banner i{color:#D85A30;font-size:14px}
+.alert-banner p{font-size:11px;color:#D85A30}
+
+.onboard-feature{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.onboard-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+
+.switch{width:40px;height:22px;background:#1D9E75;border-radius:11px;position:relative}
+.switch::after{content:'';width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;right:2px}
+
+.chart-placeholder{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;border:0.5px solid #E0E0EC}
+.line-chart{height:80px;position:relative;display:flex;align-items:flex-end;gap:4px;padding:8px 0}
+.line-point{width:8px;height:8px;background:#1D9E75;border-radius:50%;position:absolute}
+svg.sparkline{width:100%;height:80px}
+</style>
+</head>
+<body>
+
+<h1>ThaliPlan — Screen Preview</h1>
+<p class="subtitle">All 10 app screens &bull; Android & iOS &bull; React Native (Expo)</p>
+
+<div class="screen-grid">
+
+<!-- SCREEN 1: ONBOARDING -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 10 — Onboarding</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content" style="background:#fff;display:flex;flex-direction:column;align-items:center;padding-top:60px">
+
+<div style="width:72px;height:72px;border-radius:18px;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+<i class="ti ti-tools-kitchen-2" style="font-size:36px;color:#534AB7"></i>
+</div>
+<h2 style="font-size:24px;font-weight:600;color:#1A1A2E;margin-bottom:4px">ThaliPlan</h2>
+<p style="font-size:14px;color:#6B6B80;margin-bottom:32px">Your family's meal memory</p>
+
+<div style="width:100%;padding:0 24px">
+<div style="margin-bottom:14px">
+<span class="input-label">Name</span>
+<input class="input" placeholder="Your name" />
+</div>
+<div style="margin-bottom:14px">
+<span class="input-label">Email</span>
+<input class="input" placeholder="you@email.com" />
+</div>
+<div style="margin-bottom:14px">
+<span class="input-label">Password</span>
+<input class="input" type="password" placeholder="Create a password" />
+</div>
+<div style="margin-bottom:14px">
+<span class="input-label">Household name</span>
+<input class="input" placeholder="e.g. Rajwade Family" />
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:12px;background:#F0EFF5;border-radius:12px">
+<div class="avatar" style="background:#534AB7;width:52px;height:52px;font-size:18px">SR</div>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Profile picture</p>
+<div style="display:flex;gap:6px;margin-top:4px">
+<span class="chip" style="font-size:10px;cursor:pointer"><i class="ti ti-camera" style="font-size:12px"></i> Photo</span>
+<span class="chip" style="font-size:10px;cursor:pointer"><i class="ti ti-mood-smile" style="font-size:12px"></i> Avatar</span>
+</div>
+</div>
+</div>
+
+<button class="btn btn-primary btn-block" style="padding:14px;font-size:15px;border-radius:12px;margin-bottom:12px">Get started</button>
+<p style="text-align:center;font-size:12px;color:#9E9EB0">Already have an account? <span style="color:#534AB7;cursor:pointer">Sign in</span></p>
+
+<div style="margin-top:28px;padding-top:20px;border-top:1px solid #E0E0EC">
+<div class="onboard-feature">
+<div class="onboard-icon" style="background:#E8F7F1"><i class="ti ti-calendar" style="color:#1D9E75"></i></div>
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Never forget a meal</p><p style="font-size:11px;color:#6B6B80">Permanent history your whiteboard can't keep</p></div>
+</div>
+<div class="onboard-feature">
+<div class="onboard-icon" style="background:#EEEDFE"><i class="ti ti-sparkles" style="color:#534AB7"></i></div>
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Smart weekly plans</p><p style="font-size:11px;color:#6B6B80">Auto-generated from what you actually cook</p></div>
+</div>
+<div class="onboard-feature">
+<div class="onboard-icon" style="background:#FDECE6"><i class="ti ti-chart-bar" style="color:#D85A30"></i></div>
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Know your food habits</p><p style="font-size:11px;color:#6B6B80">Home vs outside ratio, spend trends, variety</p></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 2: DASHBOARD -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 1 — Dashboard</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+<div>
+<p style="font-size:20px;font-weight:600;color:#1A1A2E">ThaliPlan</p>
+<p class="text-xs text-muted">Welcome back, Sameer — June 2026</p>
+</div>
+<div style="display:flex;gap:6px">
+<span class="btn-sm btn" style="padding:6px"><i class="ti ti-bell" style="font-size:18px"></i></span>
+<span class="btn-sm btn" style="padding:6px"><i class="ti ti-settings" style="font-size:18px"></i></span>
+</div>
+</div>
+
+<div class="metric-grid">
+<div class="metric"><p class="metric-label">Home cooked</p><p class="metric-value">72%</p><p class="metric-trend trend-up"><i class="ti ti-arrow-up" style="font-size:10px"></i> 5% vs last month</p></div>
+<div class="metric"><p class="metric-label">Dine outs</p><p class="metric-value">8</p><p class="metric-trend trend-down"><i class="ti ti-arrow-up" style="font-size:10px"></i> 2 more than last month</p></div>
+<div class="metric"><p class="metric-label">Unique dishes</p><p class="metric-value">34</p><p class="metric-trend text-muted">this month</p></div>
+<div class="metric"><p class="metric-label">Outside spend</p><p class="metric-value">$320</p><p class="metric-trend trend-up"><i class="ti ti-arrow-down" style="font-size:10px"></i> $45 less</p></div>
+</div>
+
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<p class="section-title" style="margin:0">Today — Fri, Jun 27</p>
+<button class="btn btn-sm"><i class="ti ti-plus" style="font-size:12px"></i> Add</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="border:0.5px solid #E0E0EC;border-radius:10px;padding:10px">
+<div style="display:flex;gap:4px;margin-bottom:6px"><span class="badge badge-home"><i class="ti ti-sun" style="font-size:9px"></i> Lunch</span><span class="badge badge-home"><i class="ti ti-home" style="font-size:9px"></i> Home</span></div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Dal Tadka + Rice</p>
+<p class="text-xs text-muted" style="margin-top:3px">Last made: 12 days ago</p>
+</div>
+<div style="border:0.5px solid #E0E0EC;border-radius:10px;padding:10px">
+<div style="display:flex;gap:4px;margin-bottom:6px"><span class="badge" style="background:#EEEDFE;color:#534AB7"><i class="ti ti-moon" style="font-size:9px"></i> Dinner</span><span class="badge badge-takeout"><i class="ti ti-car" style="font-size:9px"></i> Takeout</span></div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Pizza — Domino's</p>
+<p class="text-xs text-muted" style="margin-top:3px">$28</p>
+</div>
+</div>
+</div>
+
+<div class="card">
+<p class="section-title">Dishes you haven't made in a while</p>
+<div class="dish-row"><span style="font-size:13px;color:#1A1A2E">Batata Bhaji</span><span class="text-xs" style="color:#D32F2F">87 days ago</span></div>
+<div class="dish-row"><span style="font-size:13px;color:#1A1A2E">Chole Bhature</span><span class="text-xs" style="color:#D32F2F">62 days ago</span></div>
+<div class="dish-row"><span style="font-size:13px;color:#1A1A2E">Pav Bhaji</span><span class="text-xs text-secondary">54 days ago</span></div>
+<div class="dish-row"><span style="font-size:13px;color:#1A1A2E">Bhindi Fry</span><span class="text-xs text-secondary">45 days ago</span></div>
+</div>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item active"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 3: WEEKLY CALENDAR -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 2 — Weekly Calendar</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:6px">
+<span class="btn-sm btn" style="padding:4px 6px"><i class="ti ti-chevron-left" style="font-size:16px"></i></span>
+<p style="font-size:16px;font-weight:600;color:#1A1A2E">Jun 23 – 29</p>
+<span class="btn-sm btn" style="padding:4px 6px"><i class="ti ti-chevron-right" style="font-size:16px"></i></span>
+</div>
+<div style="display:flex;gap:4px">
+<span class="chip chip-active">Week</span>
+<span class="chip">Month</span>
+</div>
+</div>
+
+<div class="cal-grid">
+<div class="cal-header"></div><div class="cal-header">Lunch</div><div class="cal-header">Dinner</div>
+
+<div class="cal-day"><p class="cal-day-name">Mon</p><p class="cal-day-num">23</p></div>
+<div class="cal-cell"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Rajma Chawal</p></div>
+<div class="cal-cell"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Roti + Aloo Gobi</p></div>
+
+<div class="cal-day"><p class="cal-day-name">Tue</p><p class="cal-day-num">24</p></div>
+<div class="cal-cell"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Poha</p></div>
+<div class="cal-cell"><span class="badge badge-takeout" style="font-size:9px"><i class="ti ti-car" style="font-size:8px"></i> Takeout</span><p class="dish">Chinese — Wok Express</p><p class="text-xs text-muted">$35</p></div>
+
+<div class="cal-day"><p class="cal-day-name">Wed</p><p class="cal-day-num">25</p></div>
+<div class="cal-cell"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Khichdi + Kadhi</p></div>
+<div class="cal-cell"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Paneer Tikka + Naan</p></div>
+
+<div class="cal-day"><p class="cal-day-name">Thu</p><p class="cal-day-num">26</p></div>
+<div class="cal-cell"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Masoor Dal + Rice</p></div>
+<div class="cal-cell"><span class="badge badge-dineout" style="font-size:9px"><i class="ti ti-building-store" style="font-size:8px"></i> Dine out</span><p class="dish">Honest Restaurant</p><p class="text-xs text-muted">$52</p></div>
+
+<div class="cal-day cal-today"><p class="cal-day-name">Fri</p><p class="cal-day-num">27</p><p style="font-size:7px;color:#534AB7;font-weight:600">TODAY</p></div>
+<div class="cal-cell cal-today"><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span><p class="dish">Dal Tadka + Rice</p></div>
+<div class="cal-cell cal-today"><span class="badge badge-takeout" style="font-size:9px"><i class="ti ti-car" style="font-size:8px"></i> Takeout</span><p class="dish">Pizza — Domino's</p></div>
+
+<div class="cal-day"><p class="cal-day-name">Sat</p><p class="cal-day-num">28</p></div>
+<div class="cal-cell"><p class="text-xs text-muted" style="padding:4px 0">Not planned</p></div>
+<div class="cal-cell"><p class="text-xs text-muted" style="padding:4px 0">Not planned</p></div>
+
+<div class="cal-day" style="border-bottom:none"><p class="cal-day-name">Sun</p><p class="cal-day-num">29</p></div>
+<div class="cal-cell" style="border-bottom:none"><p class="text-xs text-muted" style="padding:4px 0">Not planned</p></div>
+<div class="cal-cell" style="border-bottom:none"><p class="text-xs text-muted" style="padding:4px 0">Not planned</p></div>
+</div>
+
+<div style="display:flex;gap:8px;margin-top:14px">
+<button class="btn btn-block" style="flex:1"><i class="ti ti-plus" style="font-size:14px"></i> Add meal</button>
+<button class="btn btn-primary btn-block" style="flex:1"><i class="ti ti-sparkles" style="font-size:14px"></i> Auto-plan</button>
+</div>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item active"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 4: ADD MEAL -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 3 — Add / Edit Meal</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content" style="background:#fff">
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+<p style="font-size:18px;font-weight:600;color:#1A1A2E">Add meal</p>
+<span style="cursor:pointer"><i class="ti ti-x" style="font-size:22px;color:#6B6B80"></i></span>
+</div>
+
+<div style="margin-bottom:14px">
+<span class="input-label">Date</span>
+<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #E0E0EC;border-radius:10px;cursor:pointer">
+<i class="ti ti-calendar" style="font-size:16px;color:#534AB7"></i>
+<span style="font-size:14px;color:#1A1A2E">Fri, Jun 27, 2026</span>
+</div>
+</div>
+
+<div style="margin-bottom:14px">
+<span class="input-label">Meal</span>
+<div class="toggle-row">
+<div class="toggle-btn">Breakfast</div>
+<div class="toggle-btn active">Lunch</div>
+<div class="toggle-btn">Dinner</div>
+<div class="toggle-btn">Snack</div>
+</div>
+</div>
+
+<div style="margin-bottom:14px">
+<span class="input-label">Type</span>
+<div class="toggle-row">
+<div class="toggle-btn active-home"><i class="ti ti-home" style="font-size:14px"></i> Home</div>
+<div class="toggle-btn"><i class="ti ti-car" style="font-size:14px"></i> Takeout</div>
+<div class="toggle-btn"><i class="ti ti-building-store" style="font-size:14px"></i> Dine out</div>
+</div>
+</div>
+
+<div style="margin-bottom:14px">
+<span class="input-label">Dish name</span>
+<input class="input" placeholder="e.g. Batata Bhaji, Pasta..." />
+<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+<span class="chip" style="cursor:pointer;font-size:10px">Dal Tadka</span>
+<span class="chip" style="cursor:pointer;font-size:10px">Paneer Butter Masala</span>
+<span class="chip" style="cursor:pointer;font-size:10px">Rajma Chawal</span>
+<span class="chip" style="cursor:pointer;font-size:10px">Poha</span>
+</div>
+<p class="text-xs text-muted" style="margin-top:4px"><i class="ti ti-info-circle" style="font-size:10px"></i> Quick picks from recent dishes</p>
+</div>
+
+<div style="margin-bottom:14px">
+<span class="input-label">Cuisine</span>
+<div style="display:flex;gap:4px;flex-wrap:wrap">
+<span class="chip chip-active">Indian</span>
+<span class="chip">Chinese</span>
+<span class="chip">Italian</span>
+<span class="chip">Mexican</span>
+<span class="chip">+ Custom</span>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+<div><span class="input-label">Restaurant / source</span><input class="input" placeholder="e.g. Honest..." disabled style="opacity:0.5" /></div>
+<div><span class="input-label">Cost (optional)</span><input class="input" placeholder="$0.00" disabled style="opacity:0.5" /></div>
+</div>
+
+<div style="margin-bottom:18px">
+<span class="input-label">Notes (optional)</span>
+<textarea class="input" rows="2" placeholder="Tried a new recipe, kids loved it..." style="resize:none"></textarea>
+</div>
+
+<div style="display:flex;gap:8px">
+<button class="btn btn-block" style="flex:1">Cancel</button>
+<button class="btn btn-primary btn-block" style="flex:2">Save meal</button>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 5: AUTO PLAN -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 4 — Auto-Plan</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+<i class="ti ti-sparkles" style="font-size:20px;color:#534AB7"></i>
+<p style="font-size:18px;font-weight:600;color:#1A1A2E">Plan your week</p>
+</div>
+<p class="text-xs text-muted" style="margin-bottom:12px">Suggested plan for Jun 29 – Jul 5</p>
+
+<div class="info-banner">
+<i class="ti ti-info-circle"></i>
+<p>Avoided 12 dishes from the last 14 days. Prioritized 5 dishes not made in 30+ days.</p>
+</div>
+
+<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px">
+<span class="chip chip-green">Max 2 dine-outs</span>
+<span class="chip chip-active">Mix cuisines</span>
+<span class="chip chip-active">Include 1 new dish</span>
+<span class="chip" style="cursor:pointer"><i class="ti ti-settings" style="font-size:11px"></i> Edit rules</span>
+</div>
+
+<div class="plan-row">
+<div><p class="cal-day-name">MON</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">29</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Chole Bhature <span style="font-size:10px;color:#D32F2F">62d</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E">Bhindi Fry <span style="font-size:10px;color:#2E7D32">45d</span></p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div class="plan-row">
+<div><p class="cal-day-name">TUE</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">30</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Pav Bhaji <span style="font-size:10px;color:#2E7D32">54d</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E">Pasta <span style="font-size:10px;color:#2E7D32">38d</span></p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div class="plan-row">
+<div><p class="cal-day-name">WED</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">1</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Batata Bhaji <span style="font-size:10px;color:#D32F2F">87d!</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E">Biryani <span style="font-size:10px;color:#2E7D32">28d</span></p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div class="plan-row">
+<div><p class="cal-day-name">THU</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">2</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Upma <span style="font-size:10px;color:#2E7D32">41d</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E">Tacos <span class="badge badge-new" style="font-size:8px">New!</span></p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div class="plan-row">
+<div><p class="cal-day-name">FRI</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">3</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Dosa + Chutney <span style="font-size:10px;color:#2E7D32">33d</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E">Palak Paneer <span style="font-size:10px;color:#2E7D32">22d</span></p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div class="plan-row" style="border:2px solid #534AB7">
+<div><p class="cal-day-name">SAT</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">4</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Aloo Paratha <span style="font-size:10px;color:#2E7D32">35d</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><span class="badge badge-dineout" style="font-size:9px"><i class="ti ti-building-store" style="font-size:8px"></i> Dine out</span><p style="font-size:10px;color:#9E9EB0">your pick!</p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div class="plan-row">
+<div><p class="cal-day-name">SUN</p><p style="font-size:13px;font-weight:600;color:#1A1A2E">5</p></div>
+<div><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E">Misal Pav <span style="font-size:10px;color:#D32F2F">72d</span></p></div>
+<div><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E">Roti + Sabzi <span style="font-size:10px;color:#2E7D32">18d</span></p></div>
+<span style="cursor:pointer"><i class="ti ti-refresh" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+
+<div style="display:flex;gap:8px;margin-top:14px">
+<button class="btn btn-block" style="flex:1"><i class="ti ti-refresh" style="font-size:14px"></i> Regenerate</button>
+<button class="btn btn-primary btn-block" style="flex:2"><i class="ti ti-check" style="font-size:14px"></i> Accept plan</button>
+</div>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item active"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 6: INSIGHTS -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 5 — Insights</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<p style="font-size:18px;font-weight:600;color:#1A1A2E">Insights</p>
+<div style="display:flex;gap:3px">
+<span class="chip" style="font-size:9px">Week</span>
+<span class="chip chip-active" style="font-size:9px">Month</span>
+<span class="chip" style="font-size:9px">3mo</span>
+<span class="chip" style="font-size:9px">6mo</span>
+</div>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:8px">Home vs outside — June</p>
+<div style="display:flex;gap:12px;margin-bottom:6px;font-size:10px;color:#6B6B80">
+<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Home 72%</span>
+<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:#EF9F27;display:inline-block"></span>Takeout 16%</span>
+<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:#D85A30;display:inline-block"></span>Dine out 12%</span>
+</div>
+<div class="stacked-bar">
+<div style="width:72%;background:#1D9E75"></div>
+<div style="width:16%;background:#EF9F27"></div>
+<div style="width:12%;background:#D85A30"></div>
+</div>
+<div style="display:flex;justify-content:space-between"><p class="text-xs text-muted">May was 68% home</p><p class="text-xs trend-up"><i class="ti ti-arrow-up" style="font-size:9px"></i> Improving!</p></div>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:8px">Top restaurants</p>
+<div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#1A1A2E">Honest</span><div style="display:flex;align-items:center;gap:6px"><div class="bar-track" style="width:60px"><div class="bar-fill" style="width:100%;background:#D85A30"></div></div><span class="text-xs text-muted">5</span></div></div>
+<div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#1A1A2E">Domino's</span><div style="display:flex;align-items:center;gap:6px"><div class="bar-track" style="width:60px"><div class="bar-fill" style="width:60%;background:#D85A30"></div></div><span class="text-xs text-muted">3</span></div></div>
+<div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#1A1A2E">Wok Express</span><div style="display:flex;align-items:center;gap:6px"><div class="bar-track" style="width:60px"><div class="bar-fill" style="width:40%;background:#D85A30"></div></div><span class="text-xs text-muted">2</span></div></div>
+<div class="alert-banner" style="margin-top:8px"><i class="ti ti-alert-circle"></i><p>Honest 5x in 2 months — try somewhere new?</p></div>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:8px">Cuisine variety</p>
+<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Indian</span><span class="text-muted">58%</span></div><div class="bar-track" style="height:8px"><div class="bar-fill" style="width:58%;background:#534AB7"></div></div></div>
+<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Italian</span><span class="text-muted">18%</span></div><div class="bar-track" style="height:8px"><div class="bar-fill" style="width:18%;background:#1D9E75"></div></div></div>
+<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Chinese</span><span class="text-muted">14%</span></div><div class="bar-track" style="height:8px"><div class="bar-fill" style="width:14%;background:#D85A30"></div></div></div>
+<div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Mexican</span><span class="text-muted">10%</span></div><div class="bar-track" style="height:8px"><div class="bar-fill" style="width:10%;background:#D4537E"></div></div></div>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:8px">Spending trend</p>
+<svg viewBox="0 0 300 80" style="width:100%;height:80px">
+<polyline points="10,60 100,55 200,40 290,20" fill="none" stroke="#1D9E75" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="10,60 100,55 200,40 290,20 290,75 10,75" fill="rgba(29,158,117,0.1)"/>
+<circle cx="10" cy="60" r="3.5" fill="#1D9E75"/><circle cx="100" cy="55" r="3.5" fill="#1D9E75"/><circle cx="200" cy="40" r="3.5" fill="#1D9E75"/><circle cx="290" cy="20" r="3.5" fill="#1D9E75"/>
+<text x="10" y="75" font-size="9" fill="#9E9EB0">Apr</text><text x="95" y="75" font-size="9" fill="#9E9EB0">May</text><text x="195" y="75" font-size="9" fill="#9E9EB0">Jun</text><text x="280" y="75" font-size="9" fill="#9E9EB0">Jul</text>
+<text x="10" y="55" font-size="8" fill="#6B6B80">$380</text><text x="95" y="50" font-size="8" fill="#6B6B80">$365</text><text x="195" y="35" font-size="8" fill="#6B6B80">$320</text><text x="275" y="15" font-size="8" fill="#6B6B80">$290</text>
+</svg>
+<p class="text-xs trend-up" style="margin-top:4px"><i class="ti ti-arrow-down" style="font-size:9px"></i> Spending down 16% over 3 months</p>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:8px">Most cooked dishes</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+<div class="metric" style="text-align:center;padding:10px"><p style="font-size:18px;font-weight:600;color:#1A1A2E">8x</p><p class="text-xs text-muted">Dal + Rice</p></div>
+<div class="metric" style="text-align:center;padding:10px"><p style="font-size:18px;font-weight:600;color:#1A1A2E">6x</p><p class="text-xs text-muted">Roti + Sabzi</p></div>
+<div class="metric" style="text-align:center;padding:10px"><p style="font-size:18px;font-weight:600;color:#1A1A2E">5x</p><p class="text-xs text-muted">Khichdi</p></div>
+</div>
+</div>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item active"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 7: DISH LIBRARY -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 6 — Dish Library</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<p style="font-size:18px;font-weight:600;color:#1A1A2E">Dish library</p>
+<button class="btn btn-sm"><i class="ti ti-plus" style="font-size:12px"></i> Add dish</button>
+</div>
+
+<div style="display:flex;gap:6px;margin-bottom:10px">
+<div style="flex:1;position:relative"><i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#9E9EB0"></i><input class="input" placeholder="Search dishes..." style="padding-left:30px;font-size:12px;padding:8px 8px 8px 30px" /></div>
+<select class="input" style="width:auto;font-size:11px;padding:8px"><option>All cuisines</option></select>
+</div>
+
+<div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap">
+<span class="chip chip-active" style="font-size:10px">All (47)</span>
+<span class="chip" style="font-size:10px"><i class="ti ti-star" style="font-size:10px"></i> Favorites (12)</span>
+<span class="chip" style="font-size:10px"><i class="ti ti-clock" style="font-size:10px"></i> 30+ days (8)</span>
+<span class="chip" style="font-size:10px">Quick meals</span>
+</div>
+
+<div class="card" style="padding:0">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid #E0E0EC">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="ti ti-star-filled" style="font-size:16px;color:#EF9F27"></i>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Batata Bhaji</p>
+<div style="display:flex;gap:4px;margin-top:3px"><span class="badge badge-cuisine" style="font-size:9px">Indian</span><span class="chip" style="font-size:9px;padding:1px 5px">Quick meal</span></div>
+</div>
+</div>
+<div style="text-align:right"><p style="font-size:11px;color:#D32F2F;font-weight:500">87 days ago</p><p class="text-xs text-muted">14x total</p></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid #E0E0EC">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="ti ti-star-filled" style="font-size:16px;color:#EF9F27"></i>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Dal Tadka + Rice</p>
+<div style="display:flex;gap:4px;margin-top:3px"><span class="badge badge-cuisine" style="font-size:9px">Indian</span><span class="chip" style="font-size:9px;padding:1px 5px">Comfort food</span></div>
+</div>
+</div>
+<div style="text-align:right"><p style="font-size:11px;color:#6B6B80">12 days ago</p><p class="text-xs text-muted">22x total</p></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid #E0E0EC">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="ti ti-star" style="font-size:16px;color:#9E9EB0"></i>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Chole Bhature</p>
+<div style="display:flex;gap:4px;margin-top:3px"><span class="badge badge-cuisine" style="font-size:9px">Indian</span><span class="chip" style="font-size:9px;padding:1px 5px">Elaborate</span></div>
+</div>
+</div>
+<div style="text-align:right"><p style="font-size:11px;color:#D32F2F;font-weight:500">62 days ago</p><p class="text-xs text-muted">6x total</p></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid #E0E0EC">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="ti ti-star-filled" style="font-size:16px;color:#EF9F27"></i>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Paneer Butter Masala</p>
+<div style="display:flex;gap:4px;margin-top:3px"><span class="badge badge-cuisine" style="font-size:9px">Indian</span><span class="chip" style="font-size:9px;padding:1px 5px">Rich</span></div>
+</div>
+</div>
+<div style="text-align:right"><p style="font-size:11px;color:#6B6B80">8 days ago</p><p class="text-xs text-muted">18x total</p></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid #E0E0EC">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="ti ti-star" style="font-size:16px;color:#9E9EB0"></i>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Pasta Arrabbiata</p>
+<div style="display:flex;gap:4px;margin-top:3px"><span class="badge" style="background:#E8F7F1;color:#1D9E75;font-size:9px">Italian</span><span class="chip" style="font-size:9px;padding:1px 5px">Quick meal</span></div>
+</div>
+</div>
+<div style="text-align:right"><p style="font-size:11px;color:#6B6B80">38 days ago</p><p class="text-xs text-muted">9x total</p></div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="ti ti-star" style="font-size:16px;color:#9E9EB0"></i>
+<div>
+<p style="font-size:13px;font-weight:500;color:#1A1A2E">Tacos</p>
+<div style="display:flex;gap:4px;margin-top:3px"><span class="badge badge-dineout" style="font-size:9px">Mexican</span><span class="chip" style="font-size:9px;padding:1px 5px">Quick meal</span></div>
+</div>
+</div>
+<div style="text-align:right"><p style="font-size:11px;color:#6B6B80">21 days ago</p><p class="text-xs text-muted">3x total</p></div>
+</div>
+</div>
+
+<p class="text-xs text-muted" style="text-align:center;margin-top:10px">Showing 6 of 47 dishes</p>
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 8: RESTAURANT TRACKER -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 7 — Restaurants</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<p style="font-size:18px;font-weight:600;color:#1A1A2E">Restaurants</p>
+<select class="input" style="width:auto;font-size:11px;padding:6px 10px"><option>Last 3 months</option></select>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+<div class="metric" style="padding:10px"><p class="metric-label">Total spend</p><p style="font-size:18px;font-weight:600;color:#1A1A2E">$1,065</p></div>
+<div class="metric" style="padding:10px"><p class="metric-label">Total visits</p><p style="font-size:18px;font-weight:600;color:#1A1A2E">24</p></div>
+<div class="metric" style="padding:10px"><p class="metric-label">Unique places</p><p style="font-size:18px;font-weight:600;color:#1A1A2E">7</p></div>
+</div>
+
+<div class="rest-row">
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Honest Restaurant</p><p class="text-xs text-muted">Indian</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">8</p><p class="text-xs text-muted">visits</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">$416</p><p class="text-xs text-muted">spent</p></div>
+<div style="text-align:right"><p class="text-xs text-muted">2d ago</p><span class="badge badge-frequent" style="font-size:9px">Frequent</span></div>
+</div>
+
+<div class="rest-row">
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Domino's</p><p class="text-xs text-muted">Pizza</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">5</p><p class="text-xs text-muted">visits</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">$155</p><p class="text-xs text-muted">spent</p></div>
+<div style="text-align:right"><p class="text-xs text-muted">today</p></div>
+</div>
+
+<div class="rest-row">
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Wok Express</p><p class="text-xs text-muted">Chinese</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">4</p><p class="text-xs text-muted">visits</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">$188</p><p class="text-xs text-muted">spent</p></div>
+<div style="text-align:right"><p class="text-xs text-muted">3d ago</p></div>
+</div>
+
+<div class="rest-row">
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Subway</p><p class="text-xs text-muted">Sandwiches</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">3</p><p class="text-xs text-muted">visits</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">$78</p><p class="text-xs text-muted">spent</p></div>
+<div style="text-align:right"><p class="text-xs text-muted">18d ago</p></div>
+</div>
+
+<div class="rest-row">
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Taco Bell</p><p class="text-xs text-muted">Mexican</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">2</p><p class="text-xs text-muted">visits</p></div>
+<div style="text-align:center"><p style="font-size:15px;font-weight:600;color:#1A1A2E">$42</p><p class="text-xs text-muted">spent</p></div>
+<div style="text-align:right"><p class="text-xs text-muted">25d ago</p></div>
+</div>
+
+<div class="warn-banner" style="margin-top:8px">
+<i class="ti ti-bulb"></i>
+<div><p style="font-size:12px;font-weight:500;color:#b07a10">Try somewhere new?</p><p style="font-size:11px;color:#b07a10;margin-top:2px">68% of visits go to just 2 places. Explore something different!</p></div>
+</div>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 9: MEAL HISTORY -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 8 — Meal History</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<p style="font-size:18px;font-weight:600;color:#1A1A2E">Meal history</p>
+<button class="btn btn-sm"><i class="ti ti-download" style="font-size:12px"></i> Export</button>
+</div>
+
+<div style="display:flex;gap:4px;margin-bottom:10px">
+<span class="chip chip-active" style="font-size:10px">All</span>
+<span class="chip" style="font-size:10px"><i class="ti ti-home" style="font-size:10px"></i> Home</span>
+<span class="chip" style="font-size:10px"><i class="ti ti-car" style="font-size:10px"></i> Takeout</span>
+<span class="chip" style="font-size:10px"><i class="ti ti-building-store" style="font-size:10px"></i> Dine out</span>
+</div>
+
+<input class="input" placeholder="Search meals..." style="font-size:12px;padding:8px 12px;margin-bottom:14px" />
+
+<p style="font-size:12px;font-weight:600;color:#6B6B80;margin-bottom:8px">June 2026</p>
+
+<div class="history-row">
+<div class="history-date" style="background:#EEEDFE"><p class="cal-day-name" style="color:#534AB7">FRI</p><p style="font-size:14px;font-weight:600;color:#534AB7">27</p></div>
+<div class="history-cell"><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Dal Tadka + Rice</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+<div class="history-cell"><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Pizza — Domino's</p><span class="badge badge-takeout" style="font-size:9px"><i class="ti ti-car" style="font-size:8px"></i> $28</span></div>
+</div>
+
+<div class="history-row">
+<div class="history-date"><p class="cal-day-name">THU</p><p style="font-size:14px;font-weight:600;color:#1A1A2E">26</p></div>
+<div class="history-cell"><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Masoor Dal + Rice</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+<div class="history-cell"><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Honest Restaurant</p><span class="badge badge-dineout" style="font-size:9px"><i class="ti ti-building-store" style="font-size:8px"></i> $52</span></div>
+</div>
+
+<div class="history-row">
+<div class="history-date"><p class="cal-day-name">WED</p><p style="font-size:14px;font-weight:600;color:#1A1A2E">25</p></div>
+<div class="history-cell"><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Khichdi + Kadhi</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+<div class="history-cell"><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Paneer Tikka + Naan</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+</div>
+
+<div class="history-row">
+<div class="history-date"><p class="cal-day-name">TUE</p><p style="font-size:14px;font-weight:600;color:#1A1A2E">24</p></div>
+<div class="history-cell"><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Poha</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+<div class="history-cell"><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Chinese — Wok Express</p><span class="badge badge-takeout" style="font-size:9px"><i class="ti ti-car" style="font-size:8px"></i> $35</span></div>
+</div>
+
+<div class="history-row">
+<div class="history-date"><p class="cal-day-name">MON</p><p style="font-size:14px;font-weight:600;color:#1A1A2E">23</p></div>
+<div class="history-cell"><p class="text-xs text-muted">Lunch</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Rajma Chawal</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+<div class="history-cell"><p class="text-xs text-muted">Dinner</p><p style="font-size:12px;color:#1A1A2E;margin-top:1px">Roti + Aloo Gobi</p><span class="badge badge-home" style="font-size:9px"><i class="ti ti-home" style="font-size:8px"></i> Home</span></div>
+</div>
+
+<p class="text-xs text-muted" style="text-align:center;margin-top:12px">Scroll for more history...</p>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item active"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SCREEN 10: PROFILE -->
+<div class="screen-wrapper">
+<span class="screen-label">Screen 9 — Profile & Settings</span>
+<div class="phone">
+<div class="phone-inner">
+<div class="status-bar"><span>9:41</span><span>100%</span></div>
+<div class="screen-content">
+
+<p style="font-size:18px;font-weight:600;color:#1A1A2E;margin-bottom:14px">Settings</p>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:10px">Household</p>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<div class="avatar" style="background:#534AB7">SR</div>
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Sameer</p><p class="text-xs text-muted">Admin</p></div>
+</div>
+<span class="badge badge-cuisine" style="font-size:9px">You</span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<div class="avatar" style="background:#D4537E">PR</div>
+<div><p style="font-size:13px;font-weight:500;color:#1A1A2E">Priya</p><p class="text-xs text-muted">Member</p></div>
+</div>
+<span style="cursor:pointer"><i class="ti ti-edit" style="font-size:14px;color:#6B6B80"></i></span>
+</div>
+<button class="btn btn-block btn-sm" style="margin-top:4px"><i class="ti ti-plus" style="font-size:12px"></i> Invite family member</button>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:10px">Meal preferences</p>
+<div class="setting-row">
+<div><p style="font-size:12px;color:#1A1A2E">Default meals</p></div>
+<div style="display:flex;gap:3px"><span class="chip" style="font-size:9px">Breakfast</span><span class="chip chip-active" style="font-size:9px">Lunch</span><span class="chip chip-active" style="font-size:9px">Dinner</span><span class="chip" style="font-size:9px">Snack</span></div>
+</div>
+<div class="setting-row">
+<div><p style="font-size:12px;color:#1A1A2E">Monthly dine-out budget</p><p class="text-xs text-muted">Alert when approaching</p></div>
+<span style="font-size:13px;font-weight:500;color:#1A1A2E">$400</span>
+</div>
+<div class="setting-row">
+<div><p style="font-size:12px;color:#1A1A2E">Dish rotation reminder</p></div>
+<span class="text-xs text-secondary">After 30 days</span>
+</div>
+<div class="setting-row">
+<div><p style="font-size:12px;color:#1A1A2E">Currency</p></div>
+<span class="text-xs text-secondary">$ USD</span>
+</div>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:10px">Auto-plan rules</p>
+<div class="setting-row">
+<p style="font-size:12px;color:#1A1A2E">Max dine-outs / week</p>
+<span class="text-xs text-secondary">2</span>
+</div>
+<div class="setting-row">
+<p style="font-size:12px;color:#1A1A2E">Avoid repeating within</p>
+<span class="text-xs text-secondary">14 days</span>
+</div>
+<div class="setting-row">
+<p style="font-size:12px;color:#1A1A2E">Include new dishes</p>
+<div class="switch"></div>
+</div>
+</div>
+
+<div class="card">
+<p style="font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:10px">Account</p>
+<div style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;border-bottom:0.5px solid #E0E0EC"><i class="ti ti-download" style="font-size:16px;color:#6B6B80"></i><span style="font-size:12px;color:#1A1A2E">Export all data (CSV)</span></div>
+<div style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;border-bottom:0.5px solid #E0E0EC"><i class="ti ti-bell" style="font-size:16px;color:#6B6B80"></i><span style="font-size:12px;color:#1A1A2E">Notification preferences</span></div>
+<div style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;border-bottom:0.5px solid #E0E0EC"><i class="ti ti-lock" style="font-size:16px;color:#6B6B80"></i><span style="font-size:12px;color:#1A1A2E">Change password</span></div>
+<div style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer"><i class="ti ti-logout" style="font-size:16px;color:#D32F2F"></i><span style="font-size:12px;color:#D32F2F">Sign out</span></div>
+</div>
+
+</div>
+<div class="bot-nav">
+<div class="bot-nav-item"><i class="ti ti-home"></i>Home</div>
+<div class="bot-nav-item"><i class="ti ti-calendar"></i>Calendar</div>
+<div class="bot-nav-item"><i class="ti ti-sparkles"></i>Plan</div>
+<div class="bot-nav-item"><i class="ti ti-chart-bar"></i>Insights</div>
+<div class="bot-nav-item active"><i class="ti ti-user"></i>Profile</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<p style="text-align:center;color:#9E9EB0;font-size:12px;margin-top:40px;padding-bottom:20px">ThaliPlan v1.0 &bull; 10 screens &bull; React Native (Expo) + Firebase &bull; June 2026</p>
+
+</body>
+</html>
