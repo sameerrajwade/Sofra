@@ -3,14 +3,14 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Replace these with your actual Firebase project configuration
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyCpsrRJzwrLWKZTdEmOGMLabD8LSc1dXNQ',
+  authDomain: 'thaliplan.firebaseapp.com',
+  projectId: 'thaliplan',
+  storageBucket: 'thaliplan.firebasestorage.app',
+  messagingSenderId: '349329204088',
+  appId: '1:349329204088:web:1272792fed21678043de8d',
+  measurementId: 'G-R5EYY7RDMX',
 };
 
 const app = initializeApp(firebaseConfig);
