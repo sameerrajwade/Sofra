@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================
+    // Helper functions
+    // ========================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isHouseholdMember(householdId) {
+      return isSignedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.members;
+    }
+
+    function isHouseholdAdmin(householdId) {
+      return isSignedIn()
+        && request.auth.uid == get(/databases/$(database)/documents/households/$(householdId)).data.adminUid;
+    }
+
+    // ========================================
+    // Users collection
+    // ========================================
+
+    match /users/{userId} {
+      // Users can only read and write their own profile
+      allow read: if isSignedIn() && isOwner(userId);
+
+      allow create: if isSignedIn()
+        && isOwner(userId)
+        && request.resource.data.keys().hasAll(['uid', 'email', 'displayName', 'householdId', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string;
+
+      allow update: if isSignedIn()
+        && isOwner(userId)
+        && request.resource.data.uid == resource.data.uid  // cannot change uid
+        && request.resource.data.email == resource.data.email;  // cannot change email
+
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // ========================================
+    // Households collection
+    // ========================================
+
+    match /households/{householdId} {
+      // Any household member can read the household
+      allow read: if isHouseholdMember(householdId);
+
+      // Only authenticated users can create a household (they become admin)
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasAll(['name', 'members', 'adminUid', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.adminUid == request.auth.uid
+        && request.auth.uid in request.resource.data.members;
+
+      // Only admin can update household settings; members array changes go through Cloud Functions
+      allow update: if isHouseholdAdmin(householdId)
+        && request.resource.data.adminUid == resource.data.adminUid;  // cannot change admin via client
+
+      // Only admin can delete household
+      allow delete: if isHouseholdAdmin(householdId);
+
+      // ----------------------------------------
+      // Meals subcollection
+      // ----------------------------------------
+
+      match /meals/{mealId} {
+        // Any household member can read meals
+        allow read: if isHouseholdMember(householdId);
+
+        // Any household member can create a meal with required fields
+        allow create: if isHouseholdMember(householdId)
+          && request.resource.data.keys().hasAll(['date', 'mealType', 'sourceType', 'dishName', 'createdBy', 'createdAt'])
+          && request.resource.data.date is string
+          && request.resource.data.mealType in ['breakfast', 'lunch', 'dinner', 'snack']
+          && request.resource.data.sourceType in ['home', 'takeout', 'dineout']
+          && request.resource.data.dishName is string
+          && request.resource.data.dishName.size() > 0
+          && request.resource.data.createdBy == request.auth.uid;
+
+        // Any household member can update a meal
+        allow update: if isHouseholdMember(householdId)
+          && request.resource.data.createdBy == resource.data.createdBy  // cannot change creator
+          && request.resource.data.createdAt == resource.data.createdAt; // cannot change creation time
+
+        // Only the meal creator or household admin can delete
+        allow delete: if isHouseholdMember(householdId)
+          && (resource.data.createdBy == request.auth.uid || isHouseholdAdmin(householdId));
+      }
+
+      // ----------------------------------------
+      // Dishes subcollection
+      // ----------------------------------------
+
+      match /dishes/{dishId} {
+        allow read: if isHouseholdMember(householdId);
+
+        allow create: if isHouseholdMember(householdId)
+          && request.resource.data.keys().hasAll(['name', 'cuisineTag', 'createdAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.cuisineTag is string;
+
+        allow update: if isHouseholdMember(householdId);
+
+        // Only admin can delete dishes
+        allow delete: if isHouseholdAdmin(householdId);
+      }
+
+      // ----------------------------------------
+      // Restaurants subcollection
+      // ----------------------------------------
+
+      match /restaurants/{restaurantId} {
+        allow read: if isHouseholdMember(householdId);
+
+        allow create: if isHouseholdMember(householdId)
+          && request.resource.data.keys().hasAll(['name', 'cuisineType', 'createdAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0;
+
+        allow update: if isHouseholdMember(householdId);
+
+        // Only admin can delete restaurants
+        allow delete: if isHouseholdAdmin(householdId);
+      }
+    }
+
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
