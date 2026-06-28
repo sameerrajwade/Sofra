@@ -60,7 +60,7 @@ export const InsightsScreen: React.FC<MainTabScreenProps<'Insights'>> = () => {
 
   useEffect(() => {
     loadData();
-  }, [timeRange]);
+  }, [loadData]);
 
   useEffect(() => {
     if (meals.length === 0) return;
@@ -88,25 +88,18 @@ export const InsightsScreen: React.FC<MainTabScreenProps<'Insights'>> = () => {
     );
   }
 
-  const takeoutPercent = insights
-    ? Math.round(
-        (meals.filter(
-          (m) =>
-            m.sourceType === 'takeout' &&
-            m.date >= format(subDays(new Date(), TIME_RANGE_DAYS[timeRange]), 'yyyy-MM-dd'),
-        ).length /
-          Math.max(
-            meals.filter(
-              (m) => m.date >= format(subDays(new Date(), TIME_RANGE_DAYS[timeRange]), 'yyyy-MM-dd'),
-            ).length,
-            1,
-          )) *
-          100,
-      )
-    : 0;
-  const dineOutPercent = insights
-    ? 100 - (insights.homeCookedPercent || 0) - takeoutPercent
-    : 0;
+  const { takeoutPercent, dineOutPercent } = useMemo(() => {
+    if (!insights) return { takeoutPercent: 0, dineOutPercent: 0 };
+    const cutoff = format(subDays(new Date(), TIME_RANGE_DAYS[timeRange]), 'yyyy-MM-dd');
+    const currentMeals = meals.filter((m) => m.date >= cutoff);
+    const total = Math.max(currentMeals.length, 1);
+    const takeoutCount = currentMeals.filter((m) => m.sourceType === 'takeout').length;
+    const homePercent = insights.homeCookedPercent || 0;
+    const rawTakeout = Math.round((takeoutCount / total) * 100);
+    // Ensure all three sum to exactly 100
+    const adjustedDineOut = 100 - homePercent - rawTakeout;
+    return { takeoutPercent: rawTakeout, dineOutPercent: Math.max(adjustedDineOut, 0) };
+  }, [insights, meals, timeRange]);
 
   const maxRestaurantVisits = insights?.topRestaurants?.[0]?.visits ?? 1;
 

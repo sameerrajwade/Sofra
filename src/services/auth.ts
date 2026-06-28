@@ -13,7 +13,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth } from '../config/firebase';
 
 GoogleSignin.configure({
-  webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  webClientId: '939272773354-11lg42mo2i4uf42h2cga19ikrugd07mj.apps.googleusercontent.com',
 });
 
 export async function signUpWithEmail(

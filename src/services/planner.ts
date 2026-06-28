@@ -40,6 +40,7 @@ export function generateMealPlan(
   const plan: MealPlan[] = [];
   const usedDishes: string[] = [];
   const usedCuisinesInRow: string[] = [];
+  let dineOutCount = 0;
 
   for (let i = 0; i < days; i++) {
     const currentDate = addDays(start, i);
@@ -47,8 +48,9 @@ export function generateMealPlan(
     const dayOfWeek = getDay(currentDate); // 0=Sun, 6=Sat
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    // Step 5: Leave 1-2 dine-out slots on weekends
-    const dineOutDinner = isWeekend && Math.random() < 0.6;
+    // Only assign dine-out on weekends and within the user's maxDineOutsPerWeek limit
+    const dineOutDinner = isWeekend && dineOutCount < preferences.maxDineOutsPerWeek && Math.random() < 0.6;
+    if (dineOutDinner) dineOutCount++;
 
     // Pick lunch dish
     const lunchDish = pickDish(scored, usedDishes, usedCuisinesInRow);

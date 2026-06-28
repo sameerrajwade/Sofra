@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Household, User, UserPreferences } from '../types';
 import * as firestoreService from '../services/firestore';
+import { useAuthStore } from './useAuthStore';
 
 interface HouseholdState {
   household: Household | null;
@@ -36,6 +37,11 @@ export const useHouseholdStore = create<HouseholdState>((set) => ({
         inviteCode: household?.inviteCode || null,
         isLoading: false,
       });
+      // Update auth store so the app knows the user now has a household
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        useAuthStore.getState().setUser({ ...currentUser, householdId: id });
+      }
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
     }
@@ -53,6 +59,11 @@ export const useHouseholdStore = create<HouseholdState>((set) => ({
         inviteCode: household?.inviteCode || null,
         isLoading: false,
       });
+      // Update auth store so the app knows the user now has a household
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        useAuthStore.getState().setUser({ ...currentUser, householdId: id });
+      }
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
     }

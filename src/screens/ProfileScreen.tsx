@@ -25,6 +25,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useHouseholdStore } from '../stores/useHouseholdStore';
 import { getCurrencySymbol } from '../utils/currency';
 import { updateUserPreferences, getUserPreferences, updateUserProfile } from '../services/firestore';
+import { uploadProfilePicture } from '../services/storage';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD'];
 const ROTATION_OPTIONS = [3, 5, 7, 10, 14];
@@ -96,6 +97,10 @@ export const ProfileScreen: React.FC = () => {
       setSaving(true);
       try {
         await updateUserPreferences(user.id, partial);
+        // Sync to household store local state only (Firestore already written above)
+        useHouseholdStore.setState((state) => ({
+          preferences: state.preferences ? { ...state.preferences, ...partial } : (partial as UserPreferences),
+        }));
       } catch {
         Alert.alert('Error', 'Could not save preferences.');
       } finally {
@@ -120,7 +125,12 @@ export const ProfileScreen: React.FC = () => {
     async (uri: string | null) => {
       if (!user) return;
       try {
-        await updateUserProfile(user.id, { avatarUrl: uri });
+        let finalUrl = uri;
+        if (uri) {
+          finalUrl = await uploadProfilePicture(user.id, uri);
+        }
+        await updateUserProfile(user.id, { avatarUrl: finalUrl });
+        useAuthStore.getState().setUser({ ...user, avatarUrl: finalUrl });
       } catch {
         Alert.alert('Error', 'Could not update avatar.');
       }
@@ -241,10 +251,11 @@ export const ProfileScreen: React.FC = () => {
 
             <Text style={styles.prefLabel}>Monthly dine-out budget</Text>
             <TextInput
-              value={String(preferences.monthlyDineOutBudget)}
+              value={String(preferences.monthlyDineOutBudget ?? '')}
               onChangeText={(v) => {
-                const num = parseInt(v, 10);
-                if (!isNaN(num)) updatePreferences({ monthlyDineOutBudget: num });
+                const cleaned = v.replace(/[^0-9]/g, '');
+                const num = cleaned === '' ? 0 : parseInt(cleaned, 10);
+                updatePreferences({ monthlyDineOutBudget: num });
               }}
               keyboardType="numeric"
               mode="outlined"

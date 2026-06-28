@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StatusBar, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ const theme = {
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
@@ -43,9 +44,18 @@ export default function App() {
       } else {
         setUser(null);
       }
+      setIsInitializing(false);
     });
     return unsubscribe;
   }, [setUser]);
+
+  if (isInitializing) {
+    return (
+      <View style={initStyles.container}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -62,3 +72,12 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const initStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+});

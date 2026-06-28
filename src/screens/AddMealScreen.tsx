@@ -126,30 +126,58 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
     }
 
     try {
+      const isOutside = sourceType === 'takeout' || sourceType === 'dineout';
+      if (isOutside && !restaurantName.trim()) {
+        Alert.alert('Validation', 'Restaurant name is required for takeout and dine-out meals.');
+        return;
+      }
+
+      const mealData = {
+        date,
+        mealType,
+        sourceType,
+        dishName: dishName.trim(),
+        cuisineTag,
+        restaurantName: isOutside ? restaurantName.trim() : '',
+        cost: isOutside && cost ? parseFloat(cost) : 0,
+        notes: notes.trim() || '',
+      };
+
       if (isEditing && existingMeal) {
-        await updateMeal(householdId, existingMeal.id, {
-          date,
-          mealType,
-          sourceType,
-          dishName: dishName.trim(),
-          cuisineTag,
-          restaurantName: sourceType !== 'home' ? restaurantName.trim() : undefined,
-          cost: sourceType !== 'home' && cost ? parseFloat(cost) : undefined,
-          notes: notes.trim() || undefined,
-        });
+        await updateMeal(householdId, existingMeal.id, mealData);
       } else {
-        await addMeal(householdId, {
-          date,
-          mealType,
-          sourceType,
-          dishName: dishName.trim(),
-          cuisineTag,
-          restaurantName: sourceType !== 'home' ? restaurantName.trim() : undefined,
-          cost: sourceType !== 'home' && cost ? parseFloat(cost) : undefined,
-          notes: notes.trim() || undefined,
-          createdBy: user?.id ?? '',
-          householdId,
-        });
+        // Check for duplicate meal (same date + mealType)
+        const existingForSlot = useMealStore.getState().meals.find(
+          (m) => m.date === date && m.mealType === mealType,
+        );
+        if (existingForSlot) {
+          await new Promise<void>((resolve, reject) => {
+            Alert.alert(
+              'Meal Already Exists',
+              `A ${mealType} is already logged for this date. Do you want to replace it?`,
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => reject(new Error('cancelled')) },
+                {
+                  text: 'Replace',
+                  onPress: async () => {
+                    try {
+                      await updateMeal(householdId, existingForSlot.id, mealData);
+                      resolve();
+                    } catch (e) {
+                      reject(e);
+                    }
+                  },
+                },
+              ],
+            );
+          });
+        } else {
+          await addMeal(householdId, {
+            ...mealData,
+            createdBy: user?.id ?? '',
+            householdId,
+          });
+        }
       }
       navigation.goBack();
     } catch (e: any) {
@@ -283,35 +311,36 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
         <Text style={[styles.label, { marginTop: Spacing.md }]}>Cuisine</Text>
         <CuisineChips selected={cuisineTag} onSelect={setCuisineTag} />
 
-        {/* Restaurant */}
-        <Text style={[styles.label, { marginTop: Spacing.md }]}>Restaurant / Source</Text>
-        <TextInput
-          value={restaurantName}
-          onChangeText={setRestaurantName}
-          mode="outlined"
-          style={styles.input}
-          outlineColor={Colors.border}
-          activeOutlineColor={Colors.primary}
-          placeholder="Restaurant name"
-          disabled={sourceType === 'home'}
-          accessibilityLabel="Restaurant name"
-        />
+        {/* Restaurant & Cost - only shown for outside meals */}
+        {sourceType !== 'home' && (
+          <>
+            <Text style={[styles.label, { marginTop: Spacing.md }]}>Restaurant / Source</Text>
+            <TextInput
+              value={restaurantName}
+              onChangeText={setRestaurantName}
+              mode="outlined"
+              style={styles.input}
+              outlineColor={Colors.border}
+              activeOutlineColor={Colors.primary}
+              placeholder="Restaurant name"
+              accessibilityLabel="Restaurant name"
+            />
 
-        {/* Cost */}
-        <Text style={styles.label}>Cost</Text>
-        <TextInput
-          value={cost}
-          onChangeText={setCost}
-          mode="outlined"
-          style={styles.input}
-          outlineColor={Colors.border}
-          activeOutlineColor={Colors.primary}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-          disabled={sourceType === 'home'}
-          left={<TextInput.Affix text={currencySymbol} />}
-          accessibilityLabel="Cost"
-        />
+            <Text style={styles.label}>Cost</Text>
+            <TextInput
+              value={cost}
+              onChangeText={setCost}
+              mode="outlined"
+              style={styles.input}
+              outlineColor={Colors.border}
+              activeOutlineColor={Colors.primary}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              left={<TextInput.Affix text={currencySymbol} />}
+              accessibilityLabel="Cost"
+            />
+          </>
+        )}
 
         {/* Notes */}
         <Text style={styles.label}>Notes</Text>

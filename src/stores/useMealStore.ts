@@ -7,7 +7,11 @@ import {
   addMeal as addMealApi,
   updateMeal as updateMealApi,
   deleteMeal as deleteMealApi,
+  getDishByName,
+  incrementDishCount,
+  addOrUpdateRestaurant,
 } from '../services/firestore';
+import { useDishStore } from './useDishStore';
 
 interface MealState {
   meals: Meal[];
@@ -32,8 +36,14 @@ export const useMealStore = create<MealState>((set, get) => ({
   fetchMeals: async (householdId, startDate, endDate) => {
     set({ isLoading: true, error: null });
     try {
-      const meals = await getMealsByDateRange(householdId, startDate, endDate);
-      set({ meals, isLoading: false });
+      const fetched = await getMealsByDateRange(householdId, startDate, endDate);
+      set((state) => {
+        const existing = new Map(state.meals.map((m) => [m.id, m]));
+        for (const meal of fetched) {
+          existing.set(meal.id, meal);
+        }
+        return { meals: Array.from(existing.values()), isLoading: false };
+      });
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
     }
@@ -42,8 +52,14 @@ export const useMealStore = create<MealState>((set, get) => ({
   fetchMealsByDateRange: async (householdId, start, end) => {
     set({ isLoading: true, error: null });
     try {
-      const meals = await getMealsByDateRange(householdId, start, end);
-      set({ meals, isLoading: false });
+      const fetched = await getMealsByDateRange(householdId, start, end);
+      set((state) => {
+        const existing = new Map(state.meals.map((m) => [m.id, m]));
+        for (const meal of fetched) {
+          existing.set(meal.id, meal);
+        }
+        return { meals: Array.from(existing.values()), isLoading: false };
+      });
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
     }
@@ -83,6 +99,41 @@ export const useMealStore = create<MealState>((set, get) => ({
         meals: [...state.meals, newMeal],
         isLoading: false,
       }));
+
+      // Update dish stats (fire-and-forget)
+      try {
+        const dish = await getDishByName(householdId, meal.dishName);
+        if (dish) {
+          await incrementDishCount(householdId, dish.id, meal.date);
+          // Sync local dish store
+          useDishStore.setState((state) => ({
+            dishes: state.dishes.map((d) =>
+              d.id === dish.id
+                ? { ...d, timesCooked: d.timesCooked + 1, lastCookedDate: meal.date }
+                : d,
+            ),
+          }));
+        }
+      } catch {
+        // Non-critical: don't block meal save
+      }
+
+      // Update restaurant stats for outside meals (fire-and-forget)
+      try {
+        const isOutside = meal.sourceType === 'takeout' || meal.sourceType === 'dineout';
+        if (isOutside && meal.restaurantName) {
+          await addOrUpdateRestaurant(
+            householdId,
+            meal.restaurantName,
+            meal.cuisineTag ?? '',
+            meal.cost ?? 0,
+            meal.date,
+          );
+        }
+      } catch {
+        // Non-critical
+      }
+
       return id;
     } catch (e: any) {
       set({ error: e.message, isLoading: false });

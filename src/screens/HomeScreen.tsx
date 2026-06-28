@@ -33,6 +33,17 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { preferences } = useHouseholdStore();
 
   const currencySymbol = getCurrencySymbol(preferences?.currency ?? 'USD');
+  const currencyIcon = (() => {
+    switch (preferences?.currency) {
+      case 'INR': return 'currency-inr';
+      case 'EUR': return 'currency-eur';
+      case 'GBP': return 'currency-gbp';
+      case 'JPY': return 'currency-jpy';
+      case 'CAD': return 'currency-cad';
+      case 'AUD': return 'currency-usd';
+      default: return 'currency-usd';
+    }
+  })();
   const today = format(new Date(), 'yyyy-MM-dd');
   const isLoading = mealsLoading || dishesLoading || insightsLoading;
 
@@ -131,7 +142,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 title="Outside Spend"
                 value={`${currencySymbol}${insights.outsideSpending.toFixed(0)}`}
                 trend={insights.outsideSpendingTrend}
-                icon="currency-usd"
+                icon={currencyIcon}
                 color={Colors.takeout}
               />
             </View>
@@ -168,9 +179,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         {/* Forgotten Dishes */}
         {forgottenDishes.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>
-              Dishes you haven't made in a while
-            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('DishLibrary')}>
+              <Text style={styles.sectionTitle}>
+                Dishes you haven't made in a while {'›'}
+              </Text>
+            </TouchableOpacity>
             <FlatList
               data={forgottenDishes}
               keyExtractor={(item) => item.id}
@@ -192,6 +205,22 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             />
           </>
         )}
+
+        {/* Quick Links */}
+        <View style={styles.quickLinks}>
+          <TouchableOpacity
+            style={styles.quickLink}
+            onPress={() => navigation.navigate('Restaurants')}
+          >
+            <Text style={styles.quickLinkText}>View all restaurants {'›'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickLink}
+            onPress={() => navigation.navigate('History')}
+          >
+            <Text style={styles.quickLinkText}>View history {'›'}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <FAB
@@ -273,6 +302,22 @@ const styles = StyleSheet.create({
   forgottenDays: {
     fontSize: FontSize.sm,
     color: Colors.textMuted,
+  },
+  quickLinks: {
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  quickLink: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    elevation: 1,
+  },
+  quickLinkText: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   fab: {
     position: 'absolute',

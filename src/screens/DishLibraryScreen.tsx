@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -48,6 +48,10 @@ export const DishLibraryScreen: React.FC = () => {
   const { dishes, isLoading, error, fetchDishes, addDish, updateDish } = useDishStore();
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
+
+  useEffect(() => {
+    if (householdId) fetchDishes(householdId);
+  }, [householdId, fetchDishes]);
 
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('lastMade');

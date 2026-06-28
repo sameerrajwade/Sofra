@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { User, UserPreferences } from '../types';
 import * as authService from '../services/auth';
 import { createUserProfile, getUserProfile, getUserPreferences } from '../services/firestore';
+import { useHouseholdStore } from './useHouseholdStore';
+import { useMealStore } from './useMealStore';
+import { useDishStore } from './useDishStore';
 
 interface AuthState {
   user: User | null;
@@ -54,10 +57,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const firebaseUser = await authService.signInWithEmail(email, password);
-      const profile = await getUserProfile(firebaseUser.uid);
+      let profile = await getUserProfile(firebaseUser.uid);
+      if (!profile) {
+        profile = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email || '',
+          avatarUrl: firebaseUser.photoURL || null,
+          householdId: null,
+          createdAt: new Date(),
+        };
+        await createUserProfile(profile);
+      }
       set({
         user: profile,
-        isAuthenticated: true,
+        isAuthenticated: !!profile,
         isLoading: false,
       });
     } catch (e: any) {
@@ -88,6 +102,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       await authService.signOut();
+      useHouseholdStore.getState().clear();
+      useMealStore.getState().clear();
+      useDishStore.getState().clear();
       set({ user: null, preferences: null, isAuthenticated: false, isLoading: false });
     } catch (e: any) {
       set({ error: e.message, isLoading: false });

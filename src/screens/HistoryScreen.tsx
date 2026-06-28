@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -63,6 +63,17 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [loadedMonths, setLoadedMonths] = useState(3);
+
+  useEffect(() => {
+    if (!householdId) return;
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - loadedMonths, 1);
+    fetchMealsByDateRange(
+      householdId,
+      start.toISOString().split('T')[0],
+      now.toISOString().split('T')[0],
+    );
+  }, [householdId]);
 
   const filteredMeals = useMemo(() => {
     let result = [...meals];

@@ -185,6 +185,27 @@ export const CalendarScreen: React.FC<Props> = ({ navigation }) => {
         onToday={() => setCurrentDate(new Date())}
       />
 
+      <View style={styles.viewToggleRow}>
+        <Button
+          mode="contained"
+          compact
+          buttonColor={Colors.primary}
+          textColor={Colors.white}
+          style={styles.viewToggleButton}
+        >
+          Week
+        </Button>
+        <Button
+          mode="outlined"
+          compact
+          disabled
+          style={styles.viewToggleButton}
+          onPress={() => {}}
+        >
+          Month (Coming soon)
+        </Button>
+      </View>
+
       {isLoading && meals.length === 0 ? (
         <ActivityIndicator style={styles.loader} color={Colors.primary} />
       ) : (
@@ -354,6 +375,15 @@ const styles = StyleSheet.create({
   },
   autoPlanContent: {
     paddingVertical: Spacing.xs,
+  },
+  viewToggleRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  viewToggleButton: {
+    borderRadius: BorderRadius.sm,
   },
 });
 
