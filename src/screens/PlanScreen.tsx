@@ -55,11 +55,31 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
     includeNewDishes: true,
   };
 
+  const allDishes = React.useMemo(() => {
+    if (dishes.length > 0) return dishes;
+    const dishMap = new Map<string, typeof dishes[0]>();
+    meals.forEach((m) => {
+      if (m.dishName && !dishMap.has(m.dishName)) {
+        dishMap.set(m.dishName, {
+          id: m.dishName,
+          name: m.dishName,
+          cuisineTag: m.cuisineTag || 'Other',
+          categoryTags: [],
+          isFavorite: false,
+          timesCooked: 1,
+          lastCookedDate: m.date,
+        });
+      }
+    });
+    return Array.from(dishMap.values());
+  }, [dishes, meals]);
+
   const generate = useCallback(() => {
+    if (allDishes.length === 0) return;
     setIsGenerating(true);
     try {
       const result = generateMealPlan(
-        dishes,
+        allDishes,
         meals,
         defaultPrefs,
         startDate,
@@ -69,13 +89,13 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
     } finally {
       setIsGenerating(false);
     }
-  }, [dishes, meals, defaultPrefs, startDate]);
+  }, [allDishes, meals, defaultPrefs, startDate]);
 
   useEffect(() => {
-    if (dishes.length > 0 && plan.length === 0) {
+    if (allDishes.length > 0 && plan.length === 0) {
       generate();
     }
-  }, [dishes.length]);
+  }, [allDishes.length]);
 
   const refreshDay = useCallback(
     (dayIdx: number) => {

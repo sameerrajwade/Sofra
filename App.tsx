@@ -28,25 +28,49 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
+    let didFinish = false;
+    const timeout = setTimeout(() => {
+      if (!didFinish) {
+        didFinish = true;
+        setIsInitializing(false);
+      }
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        const profile = await getUserProfile(firebaseUser.uid);
-        setUser(
-          profile || {
-            id: firebaseUser.uid,
-            name: firebaseUser.displayName || 'User',
-            email: firebaseUser.email || '',
-            avatarUrl: firebaseUser.photoURL || null,
-            householdId: null,
-            createdAt: new Date(),
-          },
-        );
-      } else {
+      try {
+        if (firebaseUser) {
+          let profile = null;
+          try {
+            profile = await getUserProfile(firebaseUser.uid);
+          } catch {
+            // Firestore may be unreachable on first launch
+          }
+          setUser(
+            profile || {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'User',
+              email: firebaseUser.email || '',
+              avatarUrl: firebaseUser.photoURL || null,
+              householdId: null,
+              createdAt: new Date(),
+            },
+          );
+        } else {
+          setUser(null);
+        }
+      } catch {
         setUser(null);
       }
-      setIsInitializing(false);
+      if (!didFinish) {
+        didFinish = true;
+        clearTimeout(timeout);
+        setIsInitializing(false);
+      }
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [setUser]);
 
   if (isInitializing) {

@@ -84,8 +84,8 @@ export const ProfileScreen: React.FC = () => {
 
   useEffect(() => {
     if (householdId) {
-      fetchHousehold(householdId);
-      fetchMembers(householdId);
+      fetchHousehold(householdId).catch(() => {});
+      fetchMembers(householdId).catch(() => {});
     }
   }, [householdId, fetchHousehold, fetchMembers]);
 
@@ -127,7 +127,11 @@ export const ProfileScreen: React.FC = () => {
       try {
         let finalUrl = uri;
         if (uri) {
-          finalUrl = await uploadProfilePicture(user.id, uri);
+          try {
+            finalUrl = await uploadProfilePicture(user.id, uri);
+          } catch {
+            finalUrl = uri;
+          }
         }
         await updateUserProfile(user.id, { avatarUrl: finalUrl });
         useAuthStore.getState().setUser({ ...user, avatarUrl: finalUrl });

@@ -43,7 +43,8 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
-  const { addMeal, updateMeal, deleteMeal, isLoading } = useMealStore();
+  const { addMeal, updateMeal, deleteMeal } = useMealStore();
+  const [isSaving, setIsSaving] = useState(false);
   const { dishes, fetchDishes } = useDishStore();
   const { preferences } = useHouseholdStore();
 
@@ -75,12 +76,33 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
 
+  const { meals: allMeals } = useMealStore();
+
   useEffect(() => {
     if (householdId) fetchDishes(householdId);
   }, [householdId, fetchDishes]);
 
+  const allKnownDishes = useMemo(() => {
+    const dishMap = new Map<string, typeof dishes[0]>();
+    dishes.forEach((d) => dishMap.set(d.name.toLowerCase(), d));
+    allMeals.forEach((m) => {
+      if (m.dishName && !dishMap.has(m.dishName.toLowerCase())) {
+        dishMap.set(m.dishName.toLowerCase(), {
+          id: m.dishName,
+          name: m.dishName,
+          cuisineTag: m.cuisineTag || 'Other',
+          categoryTags: [],
+          isFavorite: false,
+          timesCooked: 1,
+          lastCookedDate: m.date,
+        });
+      }
+    });
+    return Array.from(dishMap.values());
+  }, [dishes, allMeals]);
+
   const recentDishNames = useMemo(() => {
-    return dishes
+    return allKnownDishes
       .filter((d) => d.lastCookedDate)
       .sort(
         (a, b) =>
@@ -89,15 +111,15 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
       )
       .slice(0, 8)
       .map((d) => d.name);
-  }, [dishes]);
+  }, [allKnownDishes]);
 
   const handleSelectDish = useCallback(
     (name: string) => {
       setDishName(name);
-      const dish = dishes.find((d) => d.name === name);
+      const dish = allKnownDishes.find((d) => d.name === name);
       if (dish) setCuisineTag(dish.cuisineTag);
     },
-    [dishes],
+    [allKnownDishes],
   );
 
   // Date picker calendar data
@@ -125,6 +147,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
       return;
     }
 
+    setIsSaving(true);
     try {
       const isOutside = sourceType === 'takeout' || sourceType === 'dineout';
       if (isOutside && !restaurantName.trim()) {
@@ -181,7 +204,11 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
       }
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to save meal.');
+      if (e.message !== 'cancelled') {
+        Alert.alert('Error', e.message ?? 'Failed to save meal.');
+      }
+    } finally {
+      setIsSaving(false);
     }
   }, [
     dishName, householdId, isEditing, existingMeal, date, mealType,
@@ -302,7 +329,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
         <DishPicker
           value={dishName}
           onChangeText={setDishName}
-          dishes={dishes}
+          dishes={allKnownDishes}
           recentDishes={recentDishNames}
           onSelectDish={handleSelectDish}
         />
@@ -362,8 +389,8 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
           <Button
             mode="contained"
             onPress={handleSave}
-            loading={isLoading}
-            disabled={isLoading}
+            loading={isSaving}
+            disabled={isSaving}
             buttonColor={Colors.primary}
             textColor={Colors.white}
             style={styles.saveButton}
@@ -375,7 +402,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
           <Button
             mode="outlined"
             onPress={() => navigation.goBack()}
-            disabled={isLoading}
+            disabled={isSaving}
             style={styles.cancelButton}
             textColor={Colors.textSecondary}
           >
@@ -386,7 +413,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
             <Button
               mode="text"
               onPress={handleDelete}
-              disabled={isLoading}
+              disabled={isSaving}
               textColor={Colors.error}
               style={styles.deleteButton}
             >
