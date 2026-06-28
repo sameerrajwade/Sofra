@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "349329204088-vpdrenka8ercjq62offbc5emm0rm86d8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.thaliplan.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "349329204088-6d984s5kj2sbnngtth6567cib4e846di.apps.googleusercontent.com",
           "client_type": 3
         }

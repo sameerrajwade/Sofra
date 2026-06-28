@@ -2,3 +2,5 @@ android/
 node_modules/
 .expo/
 gradle-dist.zip
+releases/
+app-logs.txt

@@ -80,14 +80,6 @@ export const InsightsScreen: React.FC<MainTabScreenProps<'Insights'>> = () => {
     setRefreshing(false);
   }, [loadData]);
 
-  if (isLoading && !insights) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
   const { takeoutPercent, dineOutPercent } = useMemo(() => {
     if (!insights) return { takeoutPercent: 0, dineOutPercent: 0 };
     const cutoff = format(subDays(new Date(), TIME_RANGE_DAYS[timeRange]), 'yyyy-MM-dd');
@@ -109,6 +101,14 @@ export const InsightsScreen: React.FC<MainTabScreenProps<'Insights'>> = () => {
         datasets: [{ data: insights.monthlySpending.map((m) => m.amount) }],
       }
     : null;
+
+  if (isLoading && !insights) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -140,7 +140,15 @@ export const InsightsScreen: React.FC<MainTabScreenProps<'Insights'>> = () => {
           ))}
         </View>
 
-        {insights && (
+        {!insights || meals.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="chart-bar" size={64} color={Colors.textMuted} />
+            <Text style={styles.emptyTitle}>No insights yet</Text>
+            <Text style={styles.emptySubtitle}>Start logging your meals to see eating patterns, spending trends, and cuisine variety here.</Text>
+          </View>
+        ) : null}
+
+        {insights && meals.length > 0 && (
           <>
             {/* Home vs Outside ratio */}
             <Surface style={styles.section} elevation={1}>
@@ -485,6 +493,24 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.textMuted,
     textAlign: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxl * 2,
+    gap: Spacing.md,
+  },
+  emptyTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  emptySubtitle: {
+    fontSize: FontSize.md,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
+    lineHeight: 22,
   },
 });
 

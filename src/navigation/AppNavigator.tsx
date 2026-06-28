@@ -19,6 +19,7 @@ import DishLibraryScreen from '../screens/DishLibraryScreen';
 import RestaurantScreen from '../screens/RestaurantScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import AddMealScreen from '../screens/AddMealScreen';
+import HouseholdSetupScreen from '../screens/HouseholdSetupScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -105,12 +106,19 @@ function MainTabs() {
 }
 
 export const AppNavigator: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const needsHousehold = isAuthenticated && user && !user.householdId;
 
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated ? (
         <RootStack.Screen name="Auth" component={AuthScreen} />
+      ) : needsHousehold ? (
+        <RootStack.Screen
+          name="HouseholdSetup"
+          component={HouseholdSetupScreen}
+          options={{ headerShown: false }}
+        />
       ) : (
         <>
           <RootStack.Screen name="Main" component={MainTabs} />
