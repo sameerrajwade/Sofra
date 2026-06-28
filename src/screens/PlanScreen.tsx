@@ -33,7 +33,7 @@ const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation }) => {
   const { dishes, fetchDishes } = useDishStore();
-  const { meals, addMeal, fetchMeals } = useMealStore();
+  const { meals, addMeal } = useMealStore();
   const { preferences, household } = useHouseholdStore();
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
@@ -58,11 +58,17 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
     includeNewDishes: true,
   };
 
+  const { fetchMealsForMonth } = useMealStore();
+
   useEffect(() => {
     if (!householdId) return;
+    const now = new Date();
     Promise.all([
       fetchDishes(householdId).catch(() => {}),
-      fetchMeals(householdId).catch(() => {}),
+      fetchMealsForMonth(householdId, now.getFullYear(), now.getMonth() + 1).catch(() => {}),
+      now.getMonth() > 0
+        ? fetchMealsForMonth(householdId, now.getFullYear(), now.getMonth()).catch(() => {})
+        : Promise.resolve(),
     ]).then(() => setDataLoaded(true));
   }, [householdId]);
 

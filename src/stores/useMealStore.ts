@@ -68,8 +68,14 @@ export const useMealStore = create<MealState>((set, get) => ({
   fetchMealsByDate: async (householdId, date) => {
     set({ isLoading: true, error: null });
     try {
-      const meals = await getMealsByDate(householdId, date);
-      set({ meals, isLoading: false });
+      const fetched = await getMealsByDate(householdId, date);
+      set((state) => {
+        const existing = new Map(state.meals.map((m) => [m.id, m]));
+        for (const meal of fetched) {
+          existing.set(meal.id, meal);
+        }
+        return { meals: Array.from(existing.values()), isLoading: false };
+      });
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
     }
@@ -78,8 +84,14 @@ export const useMealStore = create<MealState>((set, get) => ({
   fetchMealsForMonth: async (householdId, year, month) => {
     set({ isLoading: true, error: null });
     try {
-      const meals = await getMealsForMonth(householdId, year, month);
-      set({ meals, isLoading: false });
+      const fetched = await getMealsForMonth(householdId, year, month);
+      set((state) => {
+        const existing = new Map(state.meals.map((m) => [m.id, m]));
+        for (const meal of fetched) {
+          existing.set(meal.id, meal);
+        }
+        return { meals: Array.from(existing.values()), isLoading: false };
+      });
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
     }
