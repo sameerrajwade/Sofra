@@ -112,7 +112,7 @@ export const ProfileScreen: React.FC = () => {
 
   const toggleMealType = useCallback(
     (type: MealType) => {
-      const current = preferences.defaultMeals;
+      const current = preferences.defaultMeals ?? [];
       const updated = current.includes(type)
         ? current.filter((t) => t !== type)
         : [...current, type];
@@ -245,7 +245,7 @@ export const ProfileScreen: React.FC = () => {
                 <View key={value} style={styles.mealToggleRow}>
                   <Text style={styles.mealToggleLabel}>{label}</Text>
                   <Switch
-                    value={preferences.defaultMeals.includes(value)}
+                    value={(preferences.defaultMeals ?? []).includes(value)}
                     onValueChange={() => toggleMealType(value)}
                     color={Colors.primary}
                   />

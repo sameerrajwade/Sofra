@@ -4,6 +4,7 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import {
   Text,
@@ -31,13 +32,15 @@ import type { MainTabScreenProps } from '../navigation/types';
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation }) => {
-  const { dishes } = useDishStore();
-  const { meals, addMeal } = useMealStore();
+  const { dishes, fetchDishes } = useDishStore();
+  const { meals, addMeal, fetchMeals } = useMealStore();
   const { preferences, household } = useHouseholdStore();
   const { user } = useAuthStore();
+  const householdId = user?.householdId ?? '';
 
   const [plan, setPlan] = useState<MealPlan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [editIndex, setEditIndex] = useState<{ dayIdx: number; slot: 'lunch' | 'dinner' } | null>(null);
   const [editDishName, setEditDishName] = useState('');
   const [isAccepting, setIsAccepting] = useState(false);
@@ -55,12 +58,20 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
     includeNewDishes: true,
   };
 
+  useEffect(() => {
+    if (!householdId) return;
+    Promise.all([
+      fetchDishes(householdId).catch(() => {}),
+      fetchMeals(householdId).catch(() => {}),
+    ]).then(() => setDataLoaded(true));
+  }, [householdId]);
+
   const allDishes = React.useMemo(() => {
-    if (dishes.length > 0) return dishes;
     const dishMap = new Map<string, typeof dishes[0]>();
+    dishes.forEach((d) => dishMap.set(d.name.toLowerCase(), d));
     meals.forEach((m) => {
-      if (m.dishName && !dishMap.has(m.dishName)) {
-        dishMap.set(m.dishName, {
+      if (m.dishName && !dishMap.has(m.dishName.toLowerCase())) {
+        dishMap.set(m.dishName.toLowerCase(), {
           id: m.dishName,
           name: m.dishName,
           cuisineTag: m.cuisineTag || 'Other',
@@ -75,7 +86,10 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
   }, [dishes, meals]);
 
   const generate = useCallback(() => {
-    if (allDishes.length === 0) return;
+    if (allDishes.length === 0) {
+      Alert.alert('No dishes yet', 'Add some meals first so ThaliPlan can learn your preferences and generate a plan.');
+      return;
+    }
     setIsGenerating(true);
     try {
       const result = generateMealPlan(
@@ -92,10 +106,10 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
   }, [allDishes, meals, defaultPrefs, startDate]);
 
   useEffect(() => {
-    if (allDishes.length > 0 && plan.length === 0) {
+    if (dataLoaded && allDishes.length > 0 && plan.length === 0) {
       generate();
     }
-  }, [allDishes.length]);
+  }, [dataLoaded, allDishes.length]);
 
   const refreshDay = useCallback(
     (dayIdx: number) => {

@@ -93,8 +93,25 @@ export const CalendarScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const handleAutoPlan = useCallback(async () => {
-    if (!householdId || dishes.length === 0) {
-      Alert.alert('Cannot Auto-Plan', 'Add some dishes to your library first.');
+    const dishMap = new Map<string, typeof dishes[0]>();
+    dishes.forEach((d) => dishMap.set(d.name.toLowerCase(), d));
+    meals.forEach((m) => {
+      if (m.dishName && !dishMap.has(m.dishName.toLowerCase())) {
+        dishMap.set(m.dishName.toLowerCase(), {
+          id: m.dishName,
+          name: m.dishName,
+          cuisineTag: m.cuisineTag || 'Other',
+          categoryTags: [],
+          isFavorite: false,
+          timesCooked: 1,
+          lastCookedDate: m.date,
+        });
+      }
+    });
+    const combinedDishes = Array.from(dishMap.values());
+
+    if (!householdId || combinedDishes.length === 0) {
+      Alert.alert('No dishes yet', 'Add some meals first so ThaliPlan can generate a plan.');
       return;
     }
 
@@ -114,7 +131,7 @@ export const CalendarScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const startDate = format(unplannedDays[0], 'yyyy-MM-dd');
       const plan = generateMealPlan(
-        dishes,
+        combinedDishes,
         meals,
         {
           defaultMeals: ['lunch', 'dinner'],
