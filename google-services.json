@@ -1,49 +1,42 @@
 {
   "project_info": {
-    "project_number": "939272773354",
-    "project_id": "familywin-35a97",
-    "storage_bucket": "familywin-35a97.firebasestorage.app"
+    "project_number": "349329204088",
+    "project_id": "thaliplan",
+    "storage_bucket": "thaliplan.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:939272773354:android:be6e509bdd8c9043704193",
+        "mobilesdk_app_id": "1:349329204088:android:849211401a2d565c43de8d",
         "android_client_info": {
-          "package_name": "com.familywin.app"
+          "package_name": "com.thaliplan.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "939272773354-46k37sac2dqghvsa3jmtu3ark88f2eoo.apps.googleusercontent.com",
+          "client_id": "349329204088-1rgnc09pp4d8mpuccp03kqmtfcbfjjfb.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.familywin.app",
-            "certificate_hash": "b00f1e01907cc4ed3132193eb3c039573199dd34"
+            "package_name": "com.thaliplan.app",
+            "certificate_hash": "2d0ba9f7d87e2f300a277f486ad6923715051ad8"
           }
         },
         {
-          "client_id": "939272773354-11lg42mo2i4uf42h2cga19ikrugd07mj.apps.googleusercontent.com",
+          "client_id": "349329204088-6d984s5kj2sbnngtth6567cib4e846di.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDV51QdYLOyFqs43l-0snVk61AeILcbst0"
+          "current_key": "AIzaSyDJ7dYO7k71N65RyRpVqRYXhQQJ5a3n2j8"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "939272773354-11lg42mo2i4uf42h2cga19ikrugd07mj.apps.googleusercontent.com",
+              "client_id": "349329204088-6d984s5kj2sbnngtth6567cib4e846di.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "939272773354-pe6pu2klmih6shl8801hi3n761v3ed19.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.familywin.app"
-              }
             }
           ]
         }
