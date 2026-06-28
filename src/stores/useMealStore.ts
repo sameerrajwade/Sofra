@@ -4,6 +4,7 @@ import {
   getMealsByDateRange,
   getMealsByDate,
   getMealsForMonth,
+  getAllMeals,
   addMeal as addMealApi,
   updateMeal as updateMealApi,
   deleteMeal as deleteMealApi,
@@ -18,6 +19,7 @@ interface MealState {
   isLoading: boolean;
   error: string | null;
   fetchMeals: (householdId: string, startDate: string, endDate: string) => Promise<void>;
+  fetchAllMeals: (householdId: string) => Promise<void>;
   fetchMealsByDateRange: (householdId: string, start: string, end: string) => Promise<void>;
   fetchMealsByDate: (householdId: string, date: string) => Promise<void>;
   fetchMealsForMonth: (householdId: string, year: number, month: number) => Promise<void>;
@@ -37,6 +39,22 @@ export const useMealStore = create<MealState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const fetched = await getMealsByDateRange(householdId, startDate, endDate);
+      set((state) => {
+        const existing = new Map(state.meals.map((m) => [m.id, m]));
+        for (const meal of fetched) {
+          existing.set(meal.id, meal);
+        }
+        return { meals: Array.from(existing.values()), isLoading: false };
+      });
+    } catch (e: any) {
+      set({ error: e.message, isLoading: false });
+    }
+  },
+
+  fetchAllMeals: async (householdId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const fetched = await getAllMeals(householdId);
       set((state) => {
         const existing = new Map(state.meals.map((m) => [m.id, m]));
         for (const meal of fetched) {

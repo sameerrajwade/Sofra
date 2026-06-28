@@ -58,19 +58,31 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
     includeNewDishes: true,
   };
 
-  const { fetchMealsForMonth } = useMealStore();
+  const { fetchAllMeals } = useMealStore();
 
   useEffect(() => {
     if (!householdId) return;
-    const now = new Date();
     Promise.all([
       fetchDishes(householdId).catch(() => {}),
-      fetchMealsForMonth(householdId, now.getFullYear(), now.getMonth() + 1).catch(() => {}),
-      now.getMonth() > 0
-        ? fetchMealsForMonth(householdId, now.getFullYear(), now.getMonth()).catch(() => {})
-        : Promise.resolve(),
+      fetchAllMeals(householdId).catch(() => {}),
     ]).then(() => setDataLoaded(true));
   }, [householdId]);
+
+  useEffect(() => {
+    if (plan.length === 0) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      e.preventDefault();
+      Alert.alert(
+        'Unsaved plan',
+        'You have a generated plan that hasn\'t been accepted. Leave anyway?',
+        [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, plan.length]);
 
   const allDishes = React.useMemo(() => {
     const dishMap = new Map<string, typeof dishes[0]>();

@@ -297,15 +297,13 @@ export const CalendarScreen: React.FC<Props> = ({ navigation }) => {
         <Button
           mode="contained"
           icon="auto-fix"
-          onPress={handleAutoPlan}
-          loading={planningLoading}
-          disabled={planningLoading || isLoading}
+          onPress={() => navigation.navigate('Plan' as any)}
           buttonColor={Colors.primary}
           textColor={Colors.white}
           style={styles.autoPlanButton}
           contentStyle={styles.autoPlanContent}
         >
-          Auto-plan unplanned days
+          Plan your week
         </Button>
       </View>
     </View>

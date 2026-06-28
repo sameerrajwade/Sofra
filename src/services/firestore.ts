@@ -116,6 +116,12 @@ export async function getMealsForMonth(
   return getMealsByDateRange(householdId, start, end);
 }
 
+export async function getAllMeals(householdId: string): Promise<Meal[]> {
+  const q = query(mealsCol(householdId), orderBy('date', 'asc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(mealFromDoc);
+}
+
 // ─── Dishes ───
 
 export async function addDish(
