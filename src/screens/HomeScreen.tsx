@@ -111,7 +111,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <ActivityIndicator style={styles.loader} color={Colors.primary} />
         ) : insights ? (
           <View style={styles.metricsGrid}>
-            <View style={styles.metricCol}>
+            <TouchableOpacity style={styles.metricCol} onPress={() => navigation.getParent()?.navigate('Insights')}>
               <MetricCard
                 title="Home Cooked"
                 value={`${insights.homeCookedPercent}%`}
@@ -119,8 +119,8 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 icon="pot-steam"
                 color={Colors.home}
               />
-            </View>
-            <View style={styles.metricCol}>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.metricCol} onPress={() => navigation.navigate('Restaurants')}>
               <MetricCard
                 title="Dine Outs"
                 value={insights.dineOutCount}
@@ -128,16 +128,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 icon="store"
                 color={Colors.dineout}
               />
-            </View>
-            <View style={styles.metricCol}>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.metricCol} onPress={() => navigation.navigate('DishLibrary')}>
               <MetricCard
                 title="Unique Dishes"
                 value={insights.uniqueDishes}
                 icon="food-variant"
                 color={Colors.primary}
               />
-            </View>
-            <View style={styles.metricCol}>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.metricCol} onPress={() => navigation.navigate('Restaurants')}>
               <MetricCard
                 title="Outside Spend"
                 value={`${currencySymbol}${insights.outsideSpending.toFixed(0)}`}
@@ -145,7 +145,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 icon={currencyIcon}
                 color={Colors.takeout}
               />
-            </View>
+            </TouchableOpacity>
           </View>
         ) : (
           <Text style={styles.emptyText}>No insights available yet.</Text>
@@ -206,21 +206,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </>
         )}
 
-        {/* Quick Links */}
-        <View style={styles.quickLinks}>
-          <TouchableOpacity
-            style={styles.quickLink}
-            onPress={() => navigation.navigate('Restaurants')}
-          >
-            <Text style={styles.quickLinkText}>View all restaurants {'›'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickLink}
-            onPress={() => navigation.navigate('History')}
-          >
-            <Text style={styles.quickLinkText}>View history {'›'}</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={{ height: 80 }} />
       </ScrollView>
 
       <FAB
