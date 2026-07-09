@@ -55,10 +55,24 @@ describe('generateMealPlan', () => {
     expect(plan.every((d) => d.kids === undefined)).toBe(true);
   });
 
-  it('adds a kids tiffin per day from kids history when enabled', () => {
+  it('adds a kids tiffin on weekdays from kids history when enabled', () => {
+    // 2026-07-06..08 = Mon..Wed (all weekdays)
     const kidHistory = [meal('Veg Sandwich', '2026-07-01', { audience: 'kids' })];
     const plan = generateMealPlan(dishes, kidHistory, prefs({ planKidsTiffin: true }), '2026-07-06', 3);
     expect(plan.every((d) => d.kids?.dishName === 'Veg Sandwich')).toBe(true);
+  });
+
+  it('does not auto-plan kids tiffin on weekends', () => {
+    // 2026-07-06 is a Monday, so a 7-day plan spans Mon..Sun with
+    // Sat 2026-07-11 and Sun 2026-07-12 as the weekend.
+    const kidHistory = [meal('Veg Sandwich', '2026-07-01', { audience: 'kids' })];
+    const plan = generateMealPlan(dishes, kidHistory, prefs({ planKidsTiffin: true }), '2026-07-06', 7);
+    const byDate = Object.fromEntries(plan.map((d) => [d.date, d]));
+    expect(byDate['2026-07-11'].kids).toBeUndefined(); // Saturday
+    expect(byDate['2026-07-12'].kids).toBeUndefined(); // Sunday
+    // Weekdays still receive a kids tiffin
+    expect(byDate['2026-07-06'].kids?.dishName).toBe('Veg Sandwich'); // Monday
+    expect(byDate['2026-07-10'].kids?.dishName).toBe('Veg Sandwich'); // Friday
   });
 
   it('avoids dishes cooked within avoidRepeatDays', () => {

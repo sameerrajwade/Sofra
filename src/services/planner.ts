@@ -104,8 +104,10 @@ export function generateMealPlan(
       };
     }
 
+    // Kids tiffins are school-day meals — never auto-plan them on weekends.
+    // Sat/Sun kids tiffins can still be added explicitly by the user.
     let kidsEntry: MealPlan['kids'];
-    if (includeKids) {
+    if (includeKids && !isWeekend) {
       const kidName = nextKidDish(lastKidDish);
       lastKidDish = kidName;
       kidsEntry = { dishName: kidName, sourceType: 'home', lastMadeDaysAgo: 0, isNew: false };

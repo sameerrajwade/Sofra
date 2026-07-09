@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Searchbar, Text, Chip, ActivityIndicator, Button } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { format } from 'date-fns';
 import { Meal, SourceType } from '../types';
 import {
   Spacing,
@@ -85,8 +86,8 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
     const start = new Date(now.getFullYear(), now.getMonth() - loadedMonths, 1);
     fetchMealsByDateRange(
       householdId,
-      start.toISOString().split('T')[0],
-      now.toISOString().split('T')[0],
+      format(start, 'yyyy-MM-dd'),
+      format(now, 'yyyy-MM-dd'),
     );
   }, [householdId]);
 
@@ -172,8 +173,8 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
     const start = new Date(now.getFullYear(), now.getMonth() - newMonths, 1);
     fetchMealsByDateRange(
       householdId,
-      start.toISOString().split('T')[0],
-      now.toISOString().split('T')[0],
+      format(start, 'yyyy-MM-dd'),
+      format(now, 'yyyy-MM-dd'),
     );
   }, [loadedMonths, householdId, fetchMealsByDateRange]);
 

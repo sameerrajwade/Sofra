@@ -24,6 +24,7 @@ import { format, addDays, parseISO, startOfWeek, endOfWeek, addWeeks } from 'dat
 import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/theme';
 import { useTheme } from '../hooks/useTheme';
 import { generateMealPlan } from '../services/planner';
+import { Celebration } from '../components/Celebration';
 import { useDishStore } from '../stores/useDishStore';
 import { useMealStore } from '../stores/useMealStore';
 import { useHouseholdStore } from '../stores/useHouseholdStore';
@@ -88,6 +89,7 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
   const [editIndex, setEditIndex] = useState<{ dayIdx: number; slot: 'lunch' | 'dinner' } | null>(null);
   const [editDishName, setEditDishName] = useState('');
   const [isAccepting, setIsAccepting] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
 
   const [weekOffset, setWeekOffset] = useState(0);
   // Align the plan window to the Mon–Sun calendar week, matching Calendar & Insights.
@@ -344,10 +346,14 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
       }
       // Clearing dirty lets the mirror effect re-render from the freshly saved meals
       setIsDirty(false);
-      Alert.alert('Plan saved!', 'Your meal plan has been added to the calendar.', [
-        { text: 'View Calendar', onPress: () => navigation.navigate('Calendar' as any) },
-        { text: 'OK' },
-      ]);
+      // Celebrate the win first, then surface the confirmation so the burst is seen.
+      setCelebrate(true);
+      setTimeout(() => {
+        Alert.alert('Plan saved!', 'Your meal plan has been added to the calendar.', [
+          { text: 'View Calendar', onPress: () => navigation.navigate('Calendar' as any) },
+          { text: 'OK' },
+        ]);
+      }, 850);
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Failed to save plan.');
     } finally {
@@ -648,6 +654,13 @@ export const PlanScreen: React.FC<MainTabScreenProps<'Plan'>> = ({ navigation })
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Celebration
+        visible={celebrate}
+        onDone={() => setCelebrate(false)}
+        icon="party-popper"
+        color={colors.primary}
+      />
     </View>
   );
 };

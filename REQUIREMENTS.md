@@ -8,7 +8,7 @@
 
 **App name:** ThaliPlan ("Thali" = plate in Hindi/Marathi + Plan)
 
-**Repository:** https://github.com/sameerrajwade/DiningPlan
+**Repository:** https://github.com/sameerrajwade/Sofra
 
 **Platform:** Android & iOS (mobile app)
 

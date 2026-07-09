@@ -10,6 +10,7 @@ import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/t
 import { useTheme } from '../hooks/useTheme';
 import { MetricCard } from '../components/MetricCard';
 import { MealCard } from '../components/MealCard';
+import { Skeleton } from '../components/Skeleton';
 import { ShareStatModal, ShareStat } from '../components/ShareStatModal';
 import { FadeSlideIn, PressableScale } from '../components/motion';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -42,7 +43,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
-  const { meals, isLoading: mealsLoading, fetchMeals } = useMealStore();
+  const { meals, isLoading: mealsLoading, fetchMeals, dedupeMeals } = useMealStore();
   const { dishes, fetchDishes } = useDishStore();
   const { preferences } = useHouseholdStore();
 
@@ -65,7 +66,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const loadData = useCallback(async (force = false) => {
     if (!householdId) return;
     await Promise.all([fetchMeals(householdId, prevMonthStart, today, force), fetchDishes(householdId)]);
-  }, [householdId, prevMonthStart, today, fetchMeals, fetchDishes]);
+    // Heal any duplicate meal docs so Home matches Calendar/Plan (which dedupe too).
+    await dedupeMeals(householdId).catch(() => {});
+  }, [householdId, prevMonthStart, today, fetchMeals, fetchDishes, dedupeMeals]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -80,6 +83,17 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
   const kidsMonthCount = useMemo(
     () => meals.filter((m) => m.date >= thisMonthStart && m.date <= today && m.audience === 'kids').length,
+    [meals, thisMonthStart, today],
+  );
+  const uniqueKidsDishNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          meals
+            .filter((m) => m.date >= thisMonthStart && m.date <= today && m.audience === 'kids' && m.dishName)
+            .map((m) => m.dishName),
+        ),
+      ),
     [meals, thisMonthStart, today],
   );
 
@@ -114,15 +128,26 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   // Today's meals for every configured meal type (∪ anything logged today).
   const todayTypes = useMemo(() => {
+    // Family meal-type rows = enabled defaults ∪ any FAMILY type logged today.
+    // Kids meals render in their own section, so they must not add a family row
+    // (a kids breakfast was surfacing a phantom empty "Breakfast" family slot).
     const base = new Set<MealType>(preferences?.defaultMeals ?? ['lunch', 'dinner']);
     meals.forEach((m) => {
-      if (m.date === today) base.add(m.mealType);
+      if (m.date === today && m.audience !== 'kids') base.add(m.mealType);
     });
     return MEAL_ORDER.filter((t) => base.has(t));
   }, [preferences, meals, today]);
 
+  // If duplicates briefly coexist (before dedupe heals them), keep the most
+  // recently updated one — the same record dedupeMeals will preserve — so Home
+  // never shows a different copy than Calendar/Plan.
+  const newestOf = (list: typeof meals) =>
+    list.reduce((a, b) => ((b.updatedAt?.getTime?.() ?? 0) >= (a.updatedAt?.getTime?.() ?? 0) ? b : a));
   const mealForToday = useCallback(
-    (t: MealType) => meals.find((m) => m.date === today && m.mealType === t && m.audience !== 'kids') ?? null,
+    (t: MealType) => {
+      const matches = meals.filter((m) => m.date === today && m.mealType === t && m.audience !== 'kids');
+      return matches.length ? newestOf(matches) : null;
+    },
     [meals, today],
   );
 
@@ -294,8 +319,21 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               {kidsMonthCount > 0 && (
                 <View style={styles.metricCol}>
-                  <PressableScale onPress={() => navigation.getParent()?.navigate('Insights')}>
-                    <MetricCard title="Kids Tiffins" value={kidsMonthCount} icon="emoticon-happy-outline" color={colors.kids} />
+                  <PressableScale
+                    onPress={() =>
+                      navigation.navigate('DishLibrary', {
+                        monthDishes: uniqueKidsDishNames,
+                        title: 'Kids tiffins this month',
+                      })
+                    }
+                  >
+                    <MetricCard
+                      title="Kids Tiffins"
+                      value={kidsMonthCount}
+                      subtitle={`${uniqueKidsDishNames.length} unique ${uniqueKidsDishNames.length === 1 ? 'dish' : 'dishes'}`}
+                      icon="emoticon-happy-outline"
+                      color={colors.kids}
+                    />
                   </PressableScale>
                 </View>
               )}
@@ -316,6 +354,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         <Text style={styles.sectionTitle}>Today's meals</Text>
+        {mealsLoading && meals.length === 0 ? (
+          <View style={styles.todayMeals}>
+            {[0, 1].map((i) => (
+              <View key={i}>
+                <Skeleton width={64} height={11} style={{ marginTop: Spacing.sm, marginBottom: Spacing.xs }} />
+                <Skeleton height={64} radius={BorderRadius.md} style={{ marginVertical: Spacing.xs }} />
+              </View>
+            ))}
+          </View>
+        ) : (
         <View style={styles.todayMeals}>
           {todayTypes.map((t) => {
             const meal = mealForToday(t);
@@ -334,6 +382,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             );
           })}
         </View>
+        )}
 
         {kidsForToday.length > 0 && (
           <>

@@ -3,6 +3,7 @@ import { StyleSheet, View, Modal, Share, Alert, Pressable } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { Spacing, FontSize, BorderRadius, Fonts } from '../config/theme';
 
 export interface ShareStat {
@@ -31,7 +32,18 @@ export const ShareStatModal: React.FC<Props> = ({ stat, onClose }) => {
     setBusy(true);
     try {
       const uri = await captureRef(cardRef, { format: 'png', quality: 1, result: 'tmpfile' });
-      await Share.share({ url: uri, message: 'My family’s meal memory — Sofra' });
+      // Sharing.shareAsync sends the actual PNG on both Android & iOS. React
+      // Native's Share.share only carries `url` on iOS, so on Android it would
+      // drop the image and share plain text — hence expo-sharing here.
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          UTI: 'public.png',
+          dialogTitle: 'Share your Sofra stat',
+        });
+      } else {
+        await Share.share({ url: uri, message: 'My family’s meal memory — Sofra' });
+      }
     } catch {
       Alert.alert('Couldn’t share', 'Please try again.');
     } finally {

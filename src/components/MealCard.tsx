@@ -75,6 +75,11 @@ export const MealCard: React.FC<MealCardProps> = ({ meal, onPress, placeholder }
   const daysAgo = getDaysAgo(meal.date);
   const chipColor = sourceColor(colors, meal.sourceType);
   const chipLabel = sourceLabel(meal.sourceType);
+  // Additional dishes beyond the primary (items[0] is the primary/summary dish).
+  const extraDishes =
+    meal.items && meal.items.length > 1
+      ? meal.items.slice(1).map((it) => it.name).filter(Boolean)
+      : [];
 
   return (
     <Card style={styles.card} onPress={onPress} accessibilityLabel={`${meal.dishName}, ${chipLabel}`}>
@@ -87,7 +92,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal, onPress, placeholder }
           <View style={styles.row}>
             <Text style={styles.dishName} numberOfLines={1}>
               {meal.dishName}
-              {meal.items && meal.items.length > 1 ? ` +${meal.items.length - 1}` : ''}
             </Text>
             <View style={[styles.pill, { backgroundColor: chipColor }]}>
               <MaterialCommunityIcons name={sourceIcon(meal.sourceType) as any} size={12} color={colors.white} />
@@ -98,9 +102,13 @@ export const MealCard: React.FC<MealCardProps> = ({ meal, onPress, placeholder }
           </View>
 
           <View style={styles.metaRow}>
-            {meal.items && meal.items.length > 1 ? (
-              <Text style={styles.metaText} accessibilityLabel={`${meal.items.length} dishes`}>
-                +{meal.items.length - 1} more {meal.items.length - 1 === 1 ? 'dish' : 'dishes'}
+            {extraDishes.length > 0 ? (
+              <Text
+                style={styles.metaText}
+                numberOfLines={2}
+                accessibilityLabel={`With ${extraDishes.join(', ')}`}
+              >
+                {extraDishes.join(' · ')}
               </Text>
             ) : daysAgo !== null && daysAgo > 0 ? (
               <Text style={styles.metaText} accessibilityLabel={`Last made ${daysAgo} days ago`}>
@@ -155,7 +163,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     pillText: { color: c.white, fontSize: FontSize.xs, fontFamily: Fonts.bodySemiBold },
     metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.xs },
-    metaText: { fontFamily: Fonts.body, fontSize: FontSize.sm, color: c.textSecondary },
+    metaText: { flex: 1, fontFamily: Fonts.body, fontSize: FontSize.sm, color: c.textSecondary },
     placeholderContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     placeholderText: { fontFamily: Fonts.body, fontSize: FontSize.md, color: c.textMuted },
   });
