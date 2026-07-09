@@ -45,7 +45,8 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 
 const getDaysSince = (dateStr: string): number => {
   if (!dateStr) return 999;
-  const then = new Date(dateStr);
+  // Parse as LOCAL midnight (bare 'yyyy-MM-dd' would parse as UTC and skew by a day).
+  const then = new Date(dateStr + 'T00:00:00');
   const now = new Date();
   return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24));
 };

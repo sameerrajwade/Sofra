@@ -33,12 +33,17 @@ import { toTitleCase } from '../utils/text';
 
 type Props = RootStackScreenProps<'AddMeal'>;
 
-function getDefaultMealType(): MealType {
+// Pick a sensible starting meal type by time of day, but only among the meal
+// types the household has ENABLED — so a disabled Breakfast/Snack is never
+// auto-selected (which previously created stray breakfast meals).
+function getDefaultMealType(enabled?: MealType[]): MealType {
+  const allowed = enabled && enabled.length ? enabled : (['lunch', 'dinner'] as MealType[]);
   const hour = new Date().getHours();
-  if (hour < 11) return 'breakfast';
-  if (hour < 15) return 'lunch';
-  if (hour < 17) return 'snack';
-  return 'dinner';
+  const byTime: MealType = hour < 11 ? 'breakfast' : hour < 15 ? 'lunch' : hour < 17 ? 'snack' : 'dinner';
+  if (allowed.includes(byTime)) return byTime;
+  if (allowed.includes('lunch')) return 'lunch';
+  if (allowed.includes('dinner')) return 'dinner';
+  return allowed[0];
 }
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -63,7 +68,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
     existingMeal?.date ?? format(new Date(), 'yyyy-MM-dd'),
   );
   const [mealType, setMealType] = useState<MealType>(
-    existingMeal?.mealType ?? getDefaultMealType(),
+    existingMeal?.mealType ?? getDefaultMealType(preferences?.defaultMeals),
   );
   const [sourceType, setSourceType] = useState<SourceType>(
     existingMeal?.sourceType ?? 'home',
@@ -405,7 +410,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
 
         {/* Meal Type */}
         <Text style={[styles.label, { marginTop: Spacing.md }]}>Meal Type</Text>
-        <MealTypeToggle selected={mealType} onSelect={setMealType} />
+        <MealTypeToggle selected={mealType} onSelect={setMealType} allowed={preferences?.defaultMeals} />
 
         {/* Source Type */}
         <Text style={[styles.label, { marginTop: Spacing.md }]}>Source</Text>
@@ -415,7 +420,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
             editor inside the restaurant block below. */}
         {sourceType === 'home' && (
           <>
-            <Text style={[styles.label, { marginTop: Spacing.md }]}>Dish</Text>
+            <Text style={[styles.label, { marginTop: Spacing.md }]}>Main dish</Text>
             <DishPicker
               value={dishName}
               onChangeText={setDishName}
@@ -423,7 +428,11 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
               recentDishes={recentDishNames}
               onSelectDish={handleSelectDish}
             />
-            {/* Optional accompaniments — a full thali (curry + bread + rice + dal) */}
+            {/* Additional dishes in the same meal — a full thali (curry + bread +
+                rice + dal). Labeled + icon'd so they read as dishes, not notes. */}
+            {sides.length > 0 && (
+              <Text style={[styles.label, { marginTop: Spacing.sm }]}>More dishes in this meal</Text>
+            )}
             {sides.map((s, idx) => (
               <View key={idx} style={styles.sideRow}>
                 <TextInput
@@ -434,21 +443,22 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
                   style={styles.sideInput}
                   outlineColor={colors.border}
                   activeOutlineColor={colors.primary}
-                  placeholder={`Side dish ${idx + 1} (e.g. Rice, Roti, Dal)`}
-                  accessibilityLabel={`Side dish ${idx + 1}`}
+                  left={<TextInput.Icon icon="silverware-variant" color={colors.textMuted} />}
+                  placeholder={`Dish ${idx + 2} (e.g. Rice, Roti, Dal)`}
+                  accessibilityLabel={`Dish ${idx + 2}`}
                 />
                 <TouchableOpacity
                   onPress={() => removeSide(idx)}
                   style={styles.dishItemRemove}
-                  accessibilityLabel={`Remove side dish ${idx + 1}`}
+                  accessibilityLabel={`Remove dish ${idx + 2}`}
                 >
                   <MaterialCommunityIcons name="close" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             ))}
-            <TouchableOpacity onPress={addSide} style={styles.addDishRow} accessibilityLabel="Add a side dish">
+            <TouchableOpacity onPress={addSide} style={styles.addDishRow} accessibilityLabel="Add another dish to this meal">
               <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.primary} />
-              <Text style={styles.addDishText}>Add side dish</Text>
+              <Text style={styles.addDishText}>Add another dish</Text>
             </TouchableOpacity>
           </>
         )}

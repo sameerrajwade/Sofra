@@ -97,7 +97,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen
         name="DishLibrary"
         component={DishLibraryScreen}
-        options={{ title: 'Dish Library' }}
+        options={({ route }) => ({ title: route.params?.title ?? 'Dish Library' })}
       />
       <HomeStack.Screen
         name="Restaurants"

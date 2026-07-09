@@ -10,6 +10,9 @@ import { mealTypeIcon } from '../utils/icons';
 interface MealTypeToggleProps {
   selected: MealType;
   onSelect: (type: MealType) => void;
+  // Meal types the household has enabled. When provided, only these (plus the
+  // currently-selected one, so editing an existing meal still shows it) appear.
+  allowed?: MealType[];
 }
 
 const MEAL_TYPES: { value: MealType; label: string }[] = [
@@ -19,13 +22,18 @@ const MEAL_TYPES: { value: MealType; label: string }[] = [
   { value: 'snack', label: 'Snack' },
 ];
 
-export const MealTypeToggle: React.FC<MealTypeToggleProps> = ({ selected, onSelect }) => {
+export const MealTypeToggle: React.FC<MealTypeToggleProps> = ({ selected, onSelect, allowed }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  const visibleTypes =
+    allowed && allowed.length
+      ? MEAL_TYPES.filter(({ value }) => allowed.includes(value) || value === selected)
+      : MEAL_TYPES;
+
   return (
     <View style={styles.container} accessibilityLabel="Meal type selector">
-      {MEAL_TYPES.map(({ value, label }) => {
+      {visibleTypes.map(({ value, label }) => {
         const isSelected = selected === value;
         return (
           <TouchableOpacity

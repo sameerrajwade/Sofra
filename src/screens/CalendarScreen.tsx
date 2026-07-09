@@ -161,6 +161,8 @@ export const CalendarScreen: React.FC<Props> = ({ navigation }) => {
           {days.map((day, idx) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const today = isToday(day);
+            const dow = day.getDay(); // 0=Sun, 6=Sat
+            const isWeekend = dow === 0 || dow === 6;
             const types = mealTypesForDay(dateStr);
             return (
               <FadeSlideIn key={dateStr} delay={idx * 30}>
@@ -202,7 +204,9 @@ export const CalendarScreen: React.FC<Props> = ({ navigation }) => {
                       <MealCard meal={meal} onPress={() => navigation.navigate('AddMeal', { meal })} />
                     </View>
                   ))}
-                  {kidsOn && kidsForDay(dateStr).length === 0 && (
+                  {/* Kids tiffin is a school-day meal: only prompt on weekdays.
+                      Weekends (kids off days) show no kids-tiffin option at all. */}
+                  {kidsOn && !isWeekend && kidsForDay(dateStr).length === 0 && (
                     <View style={styles.slot}>
                       <View style={styles.kidsLabelRow}>
                         <MaterialCommunityIcons name="emoticon-happy-outline" size={12} color={colors.kids} />

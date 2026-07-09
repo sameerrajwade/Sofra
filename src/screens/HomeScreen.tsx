@@ -82,6 +82,17 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     () => meals.filter((m) => m.date >= thisMonthStart && m.date <= today && m.audience === 'kids').length,
     [meals, thisMonthStart, today],
   );
+  const uniqueKidsDishNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          meals
+            .filter((m) => m.date >= thisMonthStart && m.date <= today && m.audience === 'kids' && m.dishName)
+            .map((m) => m.dishName),
+        ),
+      ),
+    [meals, thisMonthStart, today],
+  );
 
   const homeCookedPercent = useMemo(() => {
     if (monthMeals.length === 0) return 0;
@@ -114,9 +125,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   // Today's meals for every configured meal type (∪ anything logged today).
   const todayTypes = useMemo(() => {
+    // Family meal-type rows = enabled defaults ∪ any FAMILY type logged today.
+    // Kids meals render in their own section, so they must not add a family row
+    // (a kids breakfast was surfacing a phantom empty "Breakfast" family slot).
     const base = new Set<MealType>(preferences?.defaultMeals ?? ['lunch', 'dinner']);
     meals.forEach((m) => {
-      if (m.date === today) base.add(m.mealType);
+      if (m.date === today && m.audience !== 'kids') base.add(m.mealType);
     });
     return MEAL_ORDER.filter((t) => base.has(t));
   }, [preferences, meals, today]);
@@ -294,8 +308,21 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               {kidsMonthCount > 0 && (
                 <View style={styles.metricCol}>
-                  <PressableScale onPress={() => navigation.getParent()?.navigate('Insights')}>
-                    <MetricCard title="Kids Tiffins" value={kidsMonthCount} icon="emoticon-happy-outline" color={colors.kids} />
+                  <PressableScale
+                    onPress={() =>
+                      navigation.navigate('DishLibrary', {
+                        monthDishes: uniqueKidsDishNames,
+                        title: 'Kids tiffins this month',
+                      })
+                    }
+                  >
+                    <MetricCard
+                      title="Kids Tiffins"
+                      value={kidsMonthCount}
+                      subtitle={`${uniqueKidsDishNames.length} unique ${uniqueKidsDishNames.length === 1 ? 'dish' : 'dishes'}`}
+                      icon="emoticon-happy-outline"
+                      color={colors.kids}
+                    />
                   </PressableScale>
                 </View>
               )}
