@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture — Sofra</title>
+<meta name="description" content="Sofra's technical architecture: React Native (Expo), Firebase (Auth, Firestore, Storage), Zustand state, and on-device intelligence.">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="index.html"><img src="assets/icon.png" alt="Sofra"> Sofra</a>
+  <nav>
+    <a href="guide.html">Guide</a>
+    <a href="features.html">Features</a>
+    <a href="security.html">Security</a>
+    <a href="architecture.html" class="active">Architecture</a>
+    <a href="privacy.html">Privacy</a>
+  </nav>
+</div></header>
+
+<section class="hero plain"><div class="wrap">
+  <div class="eyebrow">Under the hood</div>
+  <h1>Architecture</h1>
+  <p class="lede">A lean, modern mobile stack: a React Native client, a serverless Firebase backend, and intelligence that runs on-device from your own data.</p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow">The stack</div><h2>What Sofra is built with</h2></div>
+  <div class="grid">
+    <div class="card"><div class="ic tint-terra">📱</div><h3>React Native + Expo</h3><p>One TypeScript codebase for Android (and iOS-ready). Expo SDK 52, React Navigation for flows, React Native Paper for UI.</p></div>
+    <div class="card"><div class="ic tint-sage">🔐</div><h3>Firebase Authentication</h3><p>Google Sign-In and email/password, managing identity and sessions.</p></div>
+    <div class="card"><div class="ic tint-amber">🗄️</div><h3>Cloud Firestore</h3><p>A realtime NoSQL database holding households, meals, dishes, and restaurants — protected by server-side security rules.</p></div>
+    <div class="card"><div class="ic tint-kids">🖼️</div><h3>Cloud Storage</h3><p>Profile photos, with per-user access rules and size/type limits.</p></div>
+    <div class="card"><div class="ic tint-sage">⚡</div><h3>Zustand state</h3><p>Lightweight in-memory stores (auth, meals, dishes, household, insights, theme, notifications) keep the UI fast and reactive.</p></div>
+    <div class="card"><div class="ic tint-terra">🧠</div><h3>On-device intelligence</h3><p>Auto-planning, insights, and forgotten-dish detection are computed on the phone from your history — no meal data leaves for processing.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow">Data model</div><h2>How data is organised</h2></div>
+  <div class="prose">
+    <p>Everything is scoped under the <strong>household</strong>, which is the unit of sharing:</p>
+    <table class="tbl">
+      <tr><th>Collection</th><th>Holds</th><th>Access</th></tr>
+      <tr><td>users / {uid}</td><td>Profile, and a preferences sub-doc</td><td>Owner only</td></tr>
+      <tr><td>households / {id}</td><td>Name, invite code, members, admin</td><td>Members; admin edits</td></tr>
+      <tr><td>households / {id} / meals</td><td>Every logged meal (date, type, source, dishes, audience, cost)</td><td>Household members</td></tr>
+      <tr><td>households / {id} / dishes</td><td>The dish library</td><td>Household members</td></tr>
+      <tr><td>households / {id} / restaurants</td><td>Places, visits, spend, dish ratings</td><td>Household members</td></tr>
+    </table>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow">Design principles</div><h2>Why it's built this way</h2></div>
+  <div class="grid">
+    <div class="card"><h3>Serverless &amp; scalable</h3><p>No servers to run — Firebase scales automatically and keeps operating costs low as the family base grows.</p></div>
+    <div class="card"><h3>Reads, minimised</h3><p>A caching layer avoids redundant database reads when moving between screens, cutting cost and keeping things snappy.</p></div>
+    <div class="card"><h3>Privacy by structure</h3><p>Household scoping and deny-by-default rules mean data isolation is enforced by the backend, not just the UI.</p></div>
+    <div class="card"><h3>Tested foundations</h3><p>Core logic — planning, date ranges, formatting — is covered by an automated test suite.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>© 2026 Sofra · Your family's meal memory</span>
+  <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="mailto:sofra.support@gmail.com">Support</a></span>
+</div></footer>
+</body>
+</html>

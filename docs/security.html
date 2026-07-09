@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security — Sofra</title>
+<meta name="description" content="How Sofra keeps your family's meal data safe: authenticated access, household-scoped rules, encryption in transit, and data you fully control.">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="index.html"><img src="assets/icon.png" alt="Sofra"> Sofra</a>
+  <nav>
+    <a href="guide.html">Guide</a>
+    <a href="features.html">Features</a>
+    <a href="security.html" class="active">Security</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="privacy.html">Privacy</a>
+  </nav>
+</div></header>
+
+<section class="hero plain"><div class="wrap">
+  <div class="eyebrow">Trust</div>
+  <h1>Security &amp; data protection</h1>
+  <p class="lede">Sofra holds something personal — your family's food life. Here's how it's protected, in plain terms.</p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="grid">
+    <div class="card"><div class="ic tint-sage">🔑</div><h3>Authenticated access</h3><p>Every request requires you to be signed in via Google Sign-In or email/password, handled by Google Firebase Authentication. No anonymous access to data.</p></div>
+    <div class="card"><div class="ic tint-terra">🏠</div><h3>Household-scoped</h3><p>Meals, dishes, and restaurants live under your household and are readable only by its members. Server-side security rules enforce this — not just the app.</p></div>
+    <div class="card"><div class="ic tint-amber">🔒</div><h3>Encrypted in transit</h3><p>All data travels over HTTPS/TLS between your device and Google's servers.</p></div>
+    <div class="card"><div class="ic tint-kids">🖼️</div><h3>Photo safeguards</h3><p>Profile photos are stored per-user; only you can upload or replace your own, and uploads are limited to images under 1&nbsp;MB.</p></div>
+    <div class="card"><div class="ic tint-sage">🧹</div><h3>You control your data</h3><p>Edit or delete any meal, dish, or photo anytime. Delete your account from Settings to remove your personal data.</p></div>
+    <div class="card"><div class="ic tint-terra">🚫</div><h3>Never sold</h3><p>We do not sell your personal information, and there are no third-party advertising trackers in the app.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow">Under the hood</div><h2>How the rules actually work</h2></div>
+  <div class="prose">
+    <p>Access is enforced by <strong>server-side security rules</strong> on the database and file storage — the app can't bypass them, and neither can anyone else.</p>
+    <ul>
+      <li><strong>Users</strong> can read and edit only their own profile and preferences.</li>
+      <li><strong>Households</strong> are readable by signed-in users (needed for invite-code joins); only the admin can change settings or delete the household.</li>
+      <li><strong>Meals, dishes &amp; restaurants</strong> are readable and writable only by members of that household.</li>
+      <li><strong>Everything else</strong> is denied by default — an explicit deny-all rule backstops the whole database.</li>
+      <li><strong>Avatars</strong> in file storage: anyone signed in can view (for member lists), but only the owner can upload, replace, or delete their own — and only image files under 1&nbsp;MB.</li>
+    </ul>
+    <h3>Minimal permissions</h3>
+    <p>The Android app requests only what it uses — internet, notifications, camera and photo access for meal/profile pictures. It does not request "draw over other apps," device admin, location, contacts, SMS, or call permissions.</p>
+    <h3>Responsible disclosure</h3>
+    <p>Found a security issue? Please email <a href="mailto:sofra.support@gmail.com">sofra.support@gmail.com</a> and we'll respond promptly.</p>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>© 2026 Sofra · Your family's meal memory</span>
+  <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="mailto:sofra.support@gmail.com">Support</a></span>
+</div></footer>
+</body>
+</html>
