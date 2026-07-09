@@ -1,32 +1,137 @@
-import React, { useEffect, useState } from 'react';
-import { StatusBar, View, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StatusBar, View, ActivityIndicator, StyleSheet, Appearance } from 'react-native';
+import {
+  NavigationContainer,
+  DefaultTheme as NavLightTheme,
+  DarkTheme as NavDarkTheme,
+} from '@react-navigation/native';
+import {
+  Provider as PaperProvider,
+  MD3LightTheme,
+  MD3DarkTheme,
+} from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useTheme } from './src/hooks/useTheme';
+import { useFonts } from 'expo-font';
+import {
+  Fraunces_500Medium,
+  Fraunces_600SemiBold,
+} from '@expo-google-fonts/fraunces';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { Colors } from './src/config/theme';
 import { onAuthStateChanged } from './src/services/auth';
 import { getUserProfile } from './src/services/firestore';
 import { useAuthStore } from './src/stores/useAuthStore';
+import { useHouseholdStore } from './src/stores/useHouseholdStore';
+import * as Notifications from 'expo-notifications';
+import { useThemeStore } from './src/stores/useThemeStore';
+import { useNotificationStore } from './src/stores/useNotificationStore';
+import { navigationRef, navigate } from './src/navigation/navigationRef';
 import { migrateDishNamesToTitleCase } from './src/services/migration';
 
-const theme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: Colors.primary,
-    background: Colors.background,
-    surface: Colors.surface,
-    error: Colors.error,
-    text: Colors.text,
-    onSurface: Colors.text,
-  },
-  roundness: 10,
-};
+// Themed shell — reads the resolved palette so React Native Paper, React
+// Navigation, and the status bar all follow light/dark (fixes invisible input
+// text, light headers, and washed-out legends in dark mode).
+function ThemedApp() {
+  const { colors, isDark } = useTheme();
+
+  const paperTheme = useMemo(() => {
+    const base = isDark ? MD3DarkTheme : MD3LightTheme;
+    return {
+      ...base,
+      roundness: 10,
+      colors: {
+        ...base.colors,
+        primary: colors.primary,
+        background: colors.background,
+        surface: colors.surface,
+        surfaceVariant: colors.surfaceVariant,
+        error: colors.error,
+        onSurface: colors.text,
+        onSurfaceVariant: colors.textSecondary,
+        onBackground: colors.text,
+        outline: colors.border,
+        placeholder: colors.textMuted,
+        elevation: {
+          ...base.colors.elevation,
+          level0: 'transparent',
+          level1: colors.surface,
+          level2: colors.surface,
+          level3: colors.surface,
+        },
+      },
+    };
+  }, [isDark, colors]);
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? NavDarkTheme : NavLightTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.background,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.primary,
+      },
+    };
+  }, [isDark, colors]);
+
+  return (
+    <PaperProvider theme={paperTheme}>
+      <NavigationContainer theme={navTheme} ref={navigationRef}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+          translucent={false}
+        />
+        <AppNavigator />
+      </NavigationContainer>
+    </PaperProvider>
+  );
+}
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [fontsLoaded] = useFonts({
+    Fraunces_500Medium,
+    Fraunces_600SemiBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+
+  // Load saved theme mode + keep the OS color scheme in sync (for 'auto').
+  useEffect(() => {
+    useThemeStore.getState().hydrate();
+    useNotificationStore.getState().hydrate().catch(() => {});
+
+    // Route to the right screen when the user taps a reminder notification.
+    const notifSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { screen?: string; range?: string };
+      if (data?.screen === 'Insights') {
+        navigate('Main', { screen: 'Insights', params: { range: data.range } });
+      } else if (data?.screen === 'Plan') {
+        navigate('Main', { screen: 'Plan' });
+      }
+    });
+    const appearanceSub = Appearance.addChangeListener(({ colorScheme }) => {
+      useThemeStore.getState().setSystemScheme(colorScheme ?? 'light');
+    });
+    return () => {
+      notifSub.remove();
+      appearanceSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let didFinish = false;
@@ -55,6 +160,15 @@ export default function App() {
             createdAt: new Date(),
           };
           setUser(resolvedUser);
+          // Load household + preferences once at startup so every screen reads a
+          // single, in-sync copy (screens must NOT refetch prefs on focus — that
+          // would clobber in-memory edits like toggling a meal type off).
+          if (resolvedUser.householdId) {
+            useHouseholdStore
+              .getState()
+              .fetchHousehold(resolvedUser.householdId, resolvedUser.id)
+              .catch(() => {});
+          }
           // Run once-per-device migration to title-case existing dish names
           if (resolvedUser.householdId) {
             migrateDishNamesToTitleCase(resolvedUser.householdId).catch(() => {});
@@ -77,7 +191,7 @@ export default function App() {
     };
   }, [setUser]);
 
-  if (isInitializing) {
+  if (isInitializing || !fontsLoaded) {
     return (
       <View style={initStyles.container}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -86,18 +200,11 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={theme}>
-        <NavigationContainer>
-          <StatusBar
-            barStyle="dark-content"
-            backgroundColor={Colors.background}
-            translucent={false}
-          />
-          <AppNavigator />
-        </NavigationContainer>
-      </PaperProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemedApp />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

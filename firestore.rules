@@ -30,8 +30,9 @@ service cloud.firestore {
     // ========================================
 
     match /users/{userId} {
-      // Users can read their own profile; household members can read other members' profiles
-      allow read: if isSignedIn() && isOwner(userId);
+      // Users can read their own profile; any signed-in user can read others' profiles
+      // (needed for getHouseholdMembers when joining or viewing household)
+      allow read: if isSignedIn();
 
       // Any signed-in user can create their own profile
       allow create: if isSignedIn() && isOwner(userId);

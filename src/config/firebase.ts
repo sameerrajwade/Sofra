@@ -1,6 +1,11 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeAuth } from 'firebase/auth';
+// getReactNativePersistence ships in firebase/auth for RN but is missing from the
+// published types in this SDK version — access it without the broken type.
+import * as firebaseAuth from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const getReactNativePersistence = (firebaseAuth as any).getReactNativePersistence;
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 

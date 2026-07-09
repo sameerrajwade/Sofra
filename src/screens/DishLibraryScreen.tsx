@@ -21,10 +21,14 @@ import {
   Menu,
 } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Dish, CuisineTag } from '../types';
 import { toTitleCase } from '../utils/text';
-import { Colors, Spacing, FontSize, BorderRadius } from '../config/theme';
+import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
+import type { HomeStackParamList } from '../navigation/types';
 import { CuisineChips } from '../components/CuisineChips';
+import { cuisineIcon } from '../utils/icons';
 import { useDishStore } from '../stores/useDishStore';
 import { useMealStore } from '../stores/useMealStore';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -47,11 +51,21 @@ const getDaysSince = (dateStr: string): number => {
 };
 
 export const DishLibraryScreen: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const { dishes, isLoading, error, fetchDishes, addDish, updateDish, toggleFavorite: storeFavorite } = useDishStore();
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
 
   const { meals, fetchAllMeals } = useMealStore();
+  const route = useRoute<RouteProp<HomeStackParamList, 'DishLibrary'>>();
+  const navigation = useNavigation<any>();
+  const monthDishes = route.params?.monthDishes;
+  const monthDishSet = useMemo(
+    () => (monthDishes ? new Set(monthDishes.map((n) => n.toLowerCase())) : null),
+    [monthDishes],
+  );
 
   useEffect(() => {
     if (householdId) {
@@ -62,7 +76,9 @@ export const DishLibraryScreen: React.FC = () => {
 
   const allDishes = useMemo(() => {
     const dishMap = new Map<string, Dish>();
-    dishes.forEach((d) => dishMap.set(d.name.toLowerCase(), d));
+    // Seed from saved dishes but reset counts — timesCooked/lastCookedDate are
+    // DERIVED from meals below (fixes DISH-COUNT-2: stored + derived double count).
+    dishes.forEach((d) => dishMap.set(d.name.toLowerCase(), { ...d, timesCooked: 0, lastCookedDate: '' }));
     meals.forEach((m) => {
       if (!m.dishName) return;
       const key = m.dishName.toLowerCase();
@@ -82,6 +98,7 @@ export const DishLibraryScreen: React.FC = () => {
           isFavorite: false,
           timesCooked: 1,
           lastCookedDate: m.date,
+          householdId: m.householdId,
         });
       }
     });
@@ -106,6 +123,11 @@ export const DishLibraryScreen: React.FC = () => {
 
   const filteredDishes = useMemo(() => {
     let result = [...allDishes];
+
+    // Contextual subset (e.g. tapped "Unique Dishes" on Home → this month's dishes)
+    if (monthDishSet) {
+      result = result.filter((d) => monthDishSet.has(d.name.toLowerCase()));
+    }
 
     // Search
     if (search.trim()) {
@@ -147,7 +169,7 @@ export const DishLibraryScreen: React.FC = () => {
     }
 
     return result;
-  }, [allDishes, search, sortMode, quickFilter, cuisineFilter]);
+  }, [allDishes, search, sortMode, quickFilter, cuisineFilter, monthDishSet]);
 
   const onRefresh = useCallback(async () => {
     if (!householdId) return;
@@ -219,7 +241,7 @@ export const DishLibraryScreen: React.FC = () => {
   const renderDish = useCallback(
     ({ item }: { item: Dish }) => {
       const daysSince = getDaysSince(item.lastCookedDate);
-      const daysColor = daysSince >= 60 ? Colors.error : Colors.textSecondary;
+      const daysColor = daysSince >= 60 ? colors.error : colors.textSecondary;
 
       return (
         <TouchableOpacity
@@ -230,7 +252,7 @@ export const DishLibraryScreen: React.FC = () => {
           <MaterialCommunityIcons
             name={item.isFavorite ? 'star' : 'star-outline'}
             size={24}
-            color={item.isFavorite ? Colors.warning : Colors.textMuted}
+            color={item.isFavorite ? colors.warning : colors.textMuted}
             style={styles.starIcon}
           />
           <View style={styles.dishInfo}>
@@ -238,13 +260,14 @@ export const DishLibraryScreen: React.FC = () => {
               {item.name}
             </Text>
             <View style={styles.dishMeta}>
-              <Chip
-                compact
-                style={styles.cuisineChip}
-                textStyle={styles.cuisineChipText}
-              >
-                {item.cuisineTag}
-              </Chip>
+              <View style={styles.cuisinePill}>
+                <MaterialCommunityIcons
+                  name={cuisineIcon(item.cuisineTag) as any}
+                  size={11}
+                  color={colors.white}
+                />
+                <Text style={styles.cuisinePillText}>{item.cuisineTag}</Text>
+              </View>
               {item.categoryTags.slice(0, 2).map((tag) => (
                 <Text key={tag} style={styles.categoryTag}>
                   {tag}
@@ -261,13 +284,13 @@ export const DishLibraryScreen: React.FC = () => {
         </TouchableOpacity>
       );
     },
-    [toggleFavorite],
+    [toggleFavorite, colors, styles],
   );
 
   if (isLoading && dishes.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading dishes...</Text>
       </View>
     );
@@ -281,6 +304,8 @@ export const DishLibraryScreen: React.FC = () => {
         onChangeText={setSearch}
         style={styles.searchbar}
         inputStyle={styles.searchInput}
+        iconColor={colors.textSecondary}
+        placeholderTextColor={colors.textMuted}
       />
 
       {/* Filters row */}
@@ -345,7 +370,7 @@ export const DishLibraryScreen: React.FC = () => {
         </Menu>
       </View>
 
-      {/* Quick filter chips */}
+      {/* Quick filter chips ("All" becomes "Show all" when viewing a subset) */}
       <View style={styles.quickFilterRow}>
         {(
           [
@@ -353,25 +378,32 @@ export const DishLibraryScreen: React.FC = () => {
             { key: 'favorites', label: 'Favorites' },
             { key: 'stale', label: 'Not made 30+ days' },
           ] as const
-        ).map(({ key, label }) => (
-          <Chip
-            key={key}
-            selected={quickFilter === key}
-            onPress={() => setQuickFilter(key)}
-            style={[styles.quickChip, quickFilter === key && styles.quickChipSelected]}
-            textStyle={[
-              styles.quickChipText,
-              quickFilter === key && styles.quickChipTextSelected,
-            ]}
-          >
-            {label}
-          </Chip>
-        ))}
+        ).map(({ key, label }) => {
+          const isAll = key === 'all';
+          const displayLabel = isAll && monthDishes ? 'Show all' : label;
+          const selected = isAll ? quickFilter === 'all' && !monthDishes : quickFilter === key;
+          return (
+            <Chip
+              key={key}
+              selected={selected}
+              onPress={() => {
+                if (isAll && monthDishes) {
+                  navigation.setParams({ monthDishes: undefined, title: undefined });
+                }
+                setQuickFilter(key);
+              }}
+              style={[styles.quickChip, selected && styles.quickChipSelected]}
+              textStyle={[styles.quickChipText, selected && styles.quickChipTextSelected]}
+            >
+              {displayLabel}
+            </Chip>
+          );
+        })}
       </View>
 
       {error ? (
         <View style={styles.centered}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={48} color={Colors.error} />
+          <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
           <Button mode="outlined" onPress={onRefresh}>
             Retry
@@ -383,11 +415,11 @@ export const DishLibraryScreen: React.FC = () => {
           keyExtractor={(item) => item.id}
           renderItem={renderDish}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
           }
           ListEmptyComponent={
             <View style={styles.centered}>
-              <MaterialCommunityIcons name="food-off" size={48} color={Colors.textMuted} />
+              <MaterialCommunityIcons name="food-off" size={48} color={colors.textMuted} />
               <Text style={styles.emptyText}>No dishes found</Text>
               <Text style={styles.emptySubtext}>
                 {search ? 'Try a different search' : 'Tap + to add your first dish'}
@@ -408,15 +440,15 @@ export const DishLibraryScreen: React.FC = () => {
       <FAB
         icon="plus"
         style={styles.fab}
-        color={Colors.white}
+        color={colors.white}
         onPress={() => setDialogVisible(true)}
         accessibilityLabel="Add dish"
       />
 
       {/* Add Dish Dialog */}
       <Portal>
-        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
-          <Dialog.Title>Add Dish</Dialog.Title>
+        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)} style={styles.dialog}>
+          <Dialog.Title style={styles.dialogTitle}>Add Dish</Dialog.Title>
           <Dialog.Content>
             <TextInput
               label="Dish name"
@@ -424,8 +456,8 @@ export const DishLibraryScreen: React.FC = () => {
               onChangeText={setNewName}
               mode="outlined"
               style={styles.dialogInput}
-              outlineColor={Colors.border}
-              activeOutlineColor={Colors.primary}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
             />
             <Text style={styles.dialogLabel}>Cuisine</Text>
             <CuisineChips selected={newCuisine} onSelect={setNewCuisine} />
@@ -435,15 +467,15 @@ export const DishLibraryScreen: React.FC = () => {
               onChangeText={setNewTags}
               mode="outlined"
               style={styles.dialogInput}
-              outlineColor={Colors.border}
-              activeOutlineColor={Colors.primary}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
             />
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Favorite</Text>
               <Switch
                 value={newFavorite}
                 onValueChange={setNewFavorite}
-                color={Colors.primary}
+                color={colors.primary}
               />
             </View>
           </Dialog.Content>
@@ -463,176 +495,205 @@ export const DishLibraryScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  searchbar: {
-    margin: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    elevation: 1,
-  },
-  searchInput: {
-    fontSize: FontSize.md,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  filterChip: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterChipText: {
-    fontSize: FontSize.sm,
-  },
-  quickFilterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  quickChip: {
-    backgroundColor: Colors.surfaceVariant,
-  },
-  quickChipSelected: {
-    backgroundColor: Colors.primary,
-  },
-  quickChipText: {
-    fontSize: FontSize.sm,
-    color: Colors.text,
-  },
-  quickChipTextSelected: {
-    color: Colors.white,
-  },
-  dishRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-    borderRadius: BorderRadius.md,
-    elevation: 1,
-  },
-  starIcon: {
-    marginRight: Spacing.sm,
-  },
-  dishInfo: {
-    flex: 1,
-  },
-  dishName: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  dishMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    flexWrap: 'wrap',
-  },
-  cuisineChip: {
-    height: 24,
-    backgroundColor: Colors.primaryLight,
-  },
-  cuisineChipText: {
-    fontSize: FontSize.xs,
-    color: Colors.white,
-  },
-  categoryTag: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    backgroundColor: Colors.surfaceVariant,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
-    overflow: 'hidden',
-  },
-  dishStats: {
-    alignItems: 'flex-end',
-    marginLeft: Spacing.sm,
-  },
-  daysText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-  },
-  countText: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  loadingText: {
-    marginTop: Spacing.md,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-  },
-  errorText: {
-    fontSize: FontSize.md,
-    color: Colors.error,
-    marginVertical: Spacing.md,
-    textAlign: 'center',
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  emptyText: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: Spacing.md,
-  },
-  emptySubtext: {
-    fontSize: FontSize.md,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-  },
-  footer: {
-    textAlign: 'center',
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    paddingVertical: Spacing.md,
-  },
-  fab: {
-    position: 'absolute',
-    right: Spacing.md,
-    bottom: Spacing.md,
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.full,
-  },
-  dialogInput: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.sm,
-  },
-  dialogLabel: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-  },
-  switchLabel: {
-    fontSize: FontSize.md,
-    color: Colors.text,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    searchbar: {
+      margin: Spacing.md,
+      backgroundColor: c.surface,
+      borderRadius: BorderRadius.md,
+      elevation: 1,
+    },
+    searchInput: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.text,
+    },
+    filterRow: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.md,
+      gap: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    filterChip: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    filterChipText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.text,
+    },
+    quickFilterRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      paddingHorizontal: Spacing.md,
+      gap: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    quickChip: {
+      backgroundColor: c.surfaceVariant,
+    },
+    quickChipSelected: {
+      backgroundColor: c.primary,
+    },
+    quickChipText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.text,
+    },
+    quickChipTextSelected: {
+      color: c.white,
+    },
+    dishRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.surface,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.xs,
+      borderRadius: BorderRadius.md,
+      elevation: 1,
+    },
+    starIcon: {
+      marginRight: Spacing.sm,
+    },
+    dishInfo: {
+      flex: 1,
+    },
+    dishName: {
+      fontSize: FontSize.lg,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.text,
+      marginBottom: 2,
+    },
+    dishMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      flexWrap: 'wrap',
+    },
+    cuisinePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: BorderRadius.full,
+      backgroundColor: c.primaryLight,
+    },
+    cuisinePillText: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.white,
+    },
+    categoryTag: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.body,
+      color: c.textSecondary,
+      backgroundColor: c.surfaceVariant,
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.sm,
+      overflow: 'hidden',
+    },
+    dishStats: {
+      alignItems: 'flex-end',
+      marginLeft: Spacing.sm,
+    },
+    daysText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+    },
+    countText: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.body,
+      color: c.textMuted,
+      marginTop: 2,
+    },
+    loadingText: {
+      marginTop: Spacing.md,
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.textSecondary,
+    },
+    errorText: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.error,
+      marginVertical: Spacing.md,
+      textAlign: 'center',
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    emptyText: {
+      fontSize: FontSize.lg,
+      fontFamily: Fonts.displayMedium,
+      color: c.textSecondary,
+      marginTop: Spacing.md,
+    },
+    emptySubtext: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.textMuted,
+      marginTop: Spacing.xs,
+    },
+    footer: {
+      textAlign: 'center',
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.body,
+      color: c.textMuted,
+      paddingVertical: Spacing.md,
+    },
+    fab: {
+      position: 'absolute',
+      right: Spacing.md,
+      bottom: Spacing.md,
+      backgroundColor: c.primary,
+      borderRadius: BorderRadius.full,
+    },
+    dialog: {
+      backgroundColor: c.surface,
+    },
+    dialogTitle: {
+      fontFamily: Fonts.display,
+      color: c.text,
+    },
+    dialogInput: {
+      backgroundColor: c.surface,
+      marginBottom: Spacing.sm,
+    },
+    dialogLabel: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.textSecondary,
+      marginBottom: Spacing.xs,
+      marginTop: Spacing.xs,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
+    switchLabel: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.text,
+    },
+  });
 
 export default DishLibraryScreen;

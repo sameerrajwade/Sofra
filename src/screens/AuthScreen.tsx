@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,14 +12,17 @@ import {
   Button,
   Card,
   HelperText,
-  ActivityIndicator,
 } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Colors, Spacing, FontSize, BorderRadius } from '../config/theme';
+import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../stores/useAuthStore';
 import { createHousehold } from '../services/firestore';
 
 type AuthMode = 'signIn' | 'signUp';
+
+// Simple, permissive email shape check (server does the real validation).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const VALUE_PROPS = [
   { icon: 'chef-hat', title: 'Smart Meal Planning', desc: 'AI-powered weekly plans based on your preferences' },
@@ -28,6 +31,9 @@ const VALUE_PROPS = [
 ];
 
 export const AuthScreen: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const { signIn, signUp, signInWithGoogle, resetPassword, isLoading, error, clearError } =
     useAuthStore();
 
@@ -50,6 +56,10 @@ export const AuthScreen: React.FC = () => {
   const validate = (): boolean => {
     if (!email.trim() || !password.trim()) {
       setLocalError('Email and password are required.');
+      return false;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setLocalError('Enter a valid email address.');
       return false;
     }
     if (mode === 'signUp' && !name.trim()) {
@@ -96,6 +106,10 @@ export const AuthScreen: React.FC = () => {
       setLocalError('Enter your email address first.');
       return;
     }
+    if (!EMAIL_RE.test(email.trim())) {
+      setLocalError('Enter a valid email address.');
+      return;
+    }
     await resetPassword(email.trim());
     setResetSent(true);
   }, [email, resetPassword]);
@@ -114,9 +128,9 @@ export const AuthScreen: React.FC = () => {
         {/* Branding */}
         <View style={styles.branding}>
           <View style={styles.logoCircle}>
-            <MaterialCommunityIcons name="silverware-fork-knife" size={40} color={Colors.white} />
+            <MaterialCommunityIcons name="silverware-fork-knife" size={40} color={colors.white} />
           </View>
-          <Text style={styles.appName}>ThaliPlan</Text>
+          <Text style={styles.appName}>Sofra</Text>
           <Text style={styles.tagline}>Plan meals, not stress</Text>
         </View>
 
@@ -126,11 +140,14 @@ export const AuthScreen: React.FC = () => {
             <TextInput
               label="Your name"
               value={name}
-              onChangeText={setName}
+              onChangeText={(v) => {
+                setName(v);
+                setLocalError(null);
+              }}
               mode="outlined"
               style={styles.input}
-              outlineColor={Colors.border}
-              activeOutlineColor={Colors.primary}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
               left={<TextInput.Icon icon="account" />}
               autoCapitalize="words"
             />
@@ -145,8 +162,8 @@ export const AuthScreen: React.FC = () => {
             }}
             mode="outlined"
             style={styles.input}
-            outlineColor={Colors.border}
-            activeOutlineColor={Colors.primary}
+            outlineColor={colors.border}
+            activeOutlineColor={colors.primary}
             left={<TextInput.Icon icon="email" />}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -162,8 +179,8 @@ export const AuthScreen: React.FC = () => {
             }}
             mode="outlined"
             style={styles.input}
-            outlineColor={Colors.border}
-            activeOutlineColor={Colors.primary}
+            outlineColor={colors.border}
+            activeOutlineColor={colors.primary}
             left={<TextInput.Icon icon="lock" />}
             right={
               <TextInput.Icon
@@ -182,8 +199,8 @@ export const AuthScreen: React.FC = () => {
               onChangeText={setHouseholdName}
               mode="outlined"
               style={styles.input}
-              outlineColor={Colors.border}
-              activeOutlineColor={Colors.primary}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
               left={<TextInput.Icon icon="home-group" />}
               placeholder="e.g. The Smiths"
             />
@@ -207,8 +224,8 @@ export const AuthScreen: React.FC = () => {
             loading={isLoading}
             disabled={isLoading}
             style={styles.submitButton}
-            buttonColor={Colors.primary}
-            textColor={Colors.white}
+            buttonColor={colors.primary}
+            textColor={colors.white}
             contentStyle={styles.submitButtonContent}
           >
             {mode === 'signIn' ? 'Sign In' : 'Get Started'}
@@ -220,7 +237,7 @@ export const AuthScreen: React.FC = () => {
               onPress={handleForgotPassword}
               disabled={isLoading}
               style={styles.forgotButton}
-              textColor={Colors.primary}
+              textColor={colors.primary}
             >
               Forgot password?
             </Button>
@@ -238,7 +255,7 @@ export const AuthScreen: React.FC = () => {
             onPress={handleGoogleSignIn}
             disabled={isLoading}
             style={styles.googleButton}
-            textColor={Colors.text}
+            textColor={colors.text}
             contentStyle={styles.submitButtonContent}
           >
             Continue with Google
@@ -249,7 +266,7 @@ export const AuthScreen: React.FC = () => {
             onPress={toggleMode}
             disabled={isLoading}
             style={styles.toggleButton}
-            textColor={Colors.primary}
+            textColor={colors.primary}
           >
             {mode === 'signIn'
               ? "Don't have an account? Sign up"
@@ -266,7 +283,7 @@ export const AuthScreen: React.FC = () => {
                   <MaterialCommunityIcons
                     name={prop.icon as any}
                     size={28}
-                    color={Colors.primary}
+                    color={colors.primary}
                     style={styles.valuePropIcon}
                   />
                   <View style={styles.valuePropText}>
@@ -283,116 +300,120 @@ export const AuthScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: Spacing.xxl,
-  },
-  branding: {
-    alignItems: 'center',
-    paddingTop: Spacing.xxl + Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  appName: {
-    fontSize: FontSize.xxxl,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  tagline: {
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  form: {
-    paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.md,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.sm,
-  },
-  errorText: {
-    fontSize: FontSize.sm,
-  },
-  infoText: {
-    fontSize: FontSize.sm,
-    color: Colors.success,
-  },
-  submitButton: {
-    marginTop: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  submitButtonContent: {
-    paddingVertical: Spacing.xs,
-  },
-  forgotButton: {
-    marginTop: Spacing.xs,
-  },
-  orDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.lg,
-  },
-  orLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
-  },
-  orText: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    marginHorizontal: Spacing.md,
-  },
-  googleButton: {
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-  },
-  toggleButton: {
-    marginTop: Spacing.md,
-  },
-  valueProps: {
-    paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  valuePropCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    elevation: 1,
-  },
-  valuePropContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  valuePropIcon: {
-    marginRight: Spacing.md,
-  },
-  valuePropText: {
-    flex: 1,
-  },
-  valuePropTitle: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  valuePropDesc: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: Spacing.xxl,
+    },
+    branding: {
+      alignItems: 'center',
+      paddingTop: Spacing.xxl + Spacing.lg,
+      paddingBottom: Spacing.lg,
+    },
+    logoCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: c.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    appName: {
+      fontSize: FontSize.xxxl,
+      fontFamily: Fonts.display,
+      color: c.primary,
+    },
+    tagline: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    form: {
+      paddingHorizontal: Spacing.lg,
+      marginTop: Spacing.md,
+    },
+    input: {
+      backgroundColor: c.surface,
+      marginBottom: Spacing.sm,
+    },
+    errorText: {
+      fontSize: FontSize.sm,
+    },
+    infoText: {
+      fontSize: FontSize.sm,
+      color: c.success,
+    },
+    submitButton: {
+      marginTop: Spacing.sm,
+      borderRadius: BorderRadius.md,
+    },
+    submitButtonContent: {
+      paddingVertical: Spacing.xs,
+    },
+    forgotButton: {
+      marginTop: Spacing.xs,
+    },
+    orDivider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: Spacing.lg,
+    },
+    orLine: {
+      flex: 1,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: c.border,
+    },
+    orText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.textMuted,
+      marginHorizontal: Spacing.md,
+    },
+    googleButton: {
+      borderColor: c.border,
+      borderRadius: BorderRadius.md,
+    },
+    toggleButton: {
+      marginTop: Spacing.md,
+    },
+    valueProps: {
+      paddingHorizontal: Spacing.lg,
+      marginTop: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    valuePropCard: {
+      backgroundColor: c.surface,
+      borderRadius: BorderRadius.md,
+      elevation: 1,
+    },
+    valuePropContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    valuePropIcon: {
+      marginRight: Spacing.md,
+    },
+    valuePropText: {
+      flex: 1,
+    },
+    valuePropTitle: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.text,
+    },
+    valuePropDesc: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.body,
+      color: c.textSecondary,
+      marginTop: 2,
+    },
+  });
 
 export default AuthScreen;

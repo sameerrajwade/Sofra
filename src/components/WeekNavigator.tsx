@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Button, Text } from 'react-native-paper';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
-import { Colors, Spacing, FontSize, BorderRadius } from '../config/theme';
+import { Spacing, FontSize, Fonts, ThemeColors } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface WeekNavigatorProps {
   currentDate: Date;
@@ -17,6 +18,8 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   onNext,
   onToday,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
 
@@ -62,22 +65,17 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  label: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  todayLabel: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: Spacing.xs,
+      backgroundColor: c.surface,
+    },
+    label: { fontFamily: Fonts.bodyMedium, fontSize: FontSize.md, color: c.text },
+    todayLabel: { fontFamily: Fonts.bodyMedium, fontSize: FontSize.sm, color: c.primary },
+  });
 
 export default WeekNavigator;

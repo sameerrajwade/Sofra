@@ -5,6 +5,7 @@ import { Meal } from '../types';
 
 export type RootStackParamList = {
   Auth: undefined;
+  HouseholdSetup: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   AddMeal: { meal?: Meal } | undefined;
 };
@@ -13,15 +14,23 @@ export type MainTabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList>;
   Calendar: undefined;
   Plan: undefined;
-  Insights: undefined;
-  Profile: undefined;
+  Insights: { range?: string } | undefined;
+  Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 
 export type HomeStackParamList = {
   HomeMain: undefined;
-  DishLibrary: undefined;
+  DishLibrary: { monthDishes?: string[]; title?: string } | undefined;
   Restaurants: undefined;
+  RestaurantDetail: { name: string };
   History: undefined;
+};
+
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  Family: undefined;
+  Settings: undefined;
+  Legal: { doc: 'privacy' | 'terms' };
 };
 
 // Screen prop helpers
@@ -39,6 +48,15 @@ export type HomeStackScreenProps<T extends keyof HomeStackParamList> =
     NativeStackScreenProps<HomeStackParamList, T>,
     CompositeScreenProps<
       BottomTabScreenProps<MainTabParamList, 'Home'>,
+      NativeStackScreenProps<RootStackParamList>
+    >
+  >;
+
+export type ProfileStackScreenProps<T extends keyof ProfileStackParamList> =
+  CompositeScreenProps<
+    NativeStackScreenProps<ProfileStackParamList, T>,
+    CompositeScreenProps<
+      BottomTabScreenProps<MainTabParamList, 'Profile'>,
       NativeStackScreenProps<RootStackParamList>
     >
   >;

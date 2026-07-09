@@ -4,43 +4,46 @@ import {
   View,
   FlatList,
   RefreshControl,
+  Pressable,
 } from 'react-native';
-import { Text, Chip, ActivityIndicator, Button, Card, Banner } from 'react-native-paper';
+import { Text, ActivityIndicator, Card, Banner } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useFocusEffect } from '@react-navigation/native';
-import { Colors, Spacing, FontSize, BorderRadius } from '../config/theme';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { format } from 'date-fns';
+import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
 import { MetricCard } from '../components/MetricCard';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useHouseholdStore } from '../stores/useHouseholdStore';
 import { useMealStore } from '../stores/useMealStore';
 import { getCurrencySymbol } from '../utils/currency';
 
-type TimeRange = 'month' | '3months' | '6months' | 'all';
+type TimeRange = 'month' | 'lastMonth' | '3months' | 'all';
 
 const TIME_RANGES: { value: TimeRange; label: string }[] = [
   { value: 'month', label: 'This month' },
+  { value: 'lastMonth', label: 'Last month' },
   { value: '3months', label: 'Last 3 months' },
-  { value: '6months', label: 'Last 6 months' },
-  { value: 'all', label: 'All time' },
+  { value: 'all', label: 'All' },
 ];
 
-const getStartDate = (range: TimeRange): string | null => {
+// Closed [start, end] window (end null = up to today). Uses local-time format().
+const getRange = (range: TimeRange): { start: string | null; end: string | null } => {
   const now = new Date();
+  const y = now.getFullYear();
+  const mo = now.getMonth();
   switch (range) {
-    case 'month': {
-      const d = new Date(now.getFullYear(), now.getMonth(), 1);
-      return d.toISOString().split('T')[0];
-    }
-    case '3months': {
-      const d = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      return d.toISOString().split('T')[0];
-    }
-    case '6months': {
-      const d = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-      return d.toISOString().split('T')[0];
-    }
+    case 'month':
+      return { start: format(new Date(y, mo, 1), 'yyyy-MM-dd'), end: null };
+    case 'lastMonth':
+      return {
+        start: format(new Date(y, mo - 1, 1), 'yyyy-MM-dd'),
+        end: format(new Date(y, mo, 0), 'yyyy-MM-dd'), // day 0 = last day of prev month
+      };
+    case '3months':
+      return { start: format(new Date(y, mo - 2, 1), 'yyyy-MM-dd'), end: null };
     case 'all':
-      return null;
+      return { start: null, end: null };
   }
 };
 
@@ -65,8 +68,12 @@ export const RestaurantScreen: React.FC = () => {
   const { preferences } = useHouseholdStore();
   const householdId = user?.householdId ?? '';
 
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const navigation = useNavigation<any>();
+
   const currencySymbol = getCurrencySymbol(preferences?.currency ?? 'USD');
-  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
@@ -80,17 +87,19 @@ export const RestaurantScreen: React.FC = () => {
   const onRefresh = useCallback(async () => {
     if (!householdId) return;
     setRefreshing(true);
-    await fetchAllMeals(householdId).catch(() => {});
+    await fetchAllMeals(householdId, true).catch(() => {});
     setRefreshing(false);
   }, [householdId, fetchAllMeals]);
 
   // Compute restaurant summary directly from meals (always up-to-date with edits)
   const restaurants = useMemo((): RestaurantSummary[] => {
-    const startDate = getStartDate(timeRange);
+    const { start, end } = getRange(timeRange);
+    const upper = end ?? format(new Date(), 'yyyy-MM-dd');
     const outsideMeals = meals.filter((m) => {
       const isOutside = m.sourceType === 'dineout' || m.sourceType === 'takeout';
       if (!isOutside || !m.restaurantName) return false;
-      if (startDate && m.date < startDate) return false;
+      if (start && m.date < start) return false;
+      if (m.date > upper) return false; // exclude future/out-of-window meals
       return true;
     });
 
@@ -126,11 +135,38 @@ export const RestaurantScreen: React.FC = () => {
     return topTwoVisits / totalVisits > 0.6;
   }, [restaurants, totalVisits]);
 
+  // Compact row for the "All" list — with a large restaurant count, full stat
+  // cards don't scale, so show a scannable line and defer details to the tap.
+  const renderRestaurantCompact = useCallback(
+    ({ item }: { item: RestaurantSummary }) => (
+      <Card
+        style={styles.compactCard}
+        onPress={() => navigation.navigate('RestaurantDetail', { name: item.name })}
+      >
+        <Card.Content style={styles.compactContent}>
+          <View style={styles.compactInfo}>
+            <Text style={styles.compactName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.compactMeta} numberOfLines={1}>
+              {item.totalVisits} {item.totalVisits === 1 ? 'visit' : 'visits'} · last {formatDate(item.lastVisitDate)}
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </Card.Content>
+      </Card>
+    ),
+    [styles, colors, navigation],
+  );
+
   const renderRestaurant = useCallback(
     ({ item }: { item: RestaurantSummary }) => {
       const isFrequent = item.totalVisits > 4;
       return (
-        <Card style={styles.restaurantCard}>
+        <Card
+          style={styles.restaurantCard}
+          onPress={() => navigation.navigate('RestaurantDetail', { name: item.name })}
+        >
           <Card.Content>
             <View style={styles.restaurantHeader}>
               <View style={styles.restaurantInfo}>
@@ -139,17 +175,14 @@ export const RestaurantScreen: React.FC = () => {
                     {item.name}
                   </Text>
                   {isFrequent && (
-                    <Chip
-                      compact
-                      style={styles.frequentBadge}
-                      textStyle={styles.frequentBadgeText}
-                    >
-                      Frequent
-                    </Chip>
+                    <View style={styles.frequentPill}>
+                      <Text style={styles.frequentPillText}>Frequent</Text>
+                    </View>
                   )}
                 </View>
                 <Text style={styles.cuisineText}>{item.cuisineType}</Text>
               </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
             </View>
             <View style={styles.restaurantStats}>
               <View style={styles.stat}>
@@ -169,13 +202,13 @@ export const RestaurantScreen: React.FC = () => {
         </Card>
       );
     },
-    [currencySymbol],
+    [currencySymbol, styles, colors, navigation],
   );
 
   if (isLoading && meals.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -186,27 +219,34 @@ export const RestaurantScreen: React.FC = () => {
       <FlatList
         data={restaurants}
         keyExtractor={(item) => item.id}
-        renderItem={renderRestaurant}
+        renderItem={timeRange === 'all' ? renderRestaurantCompact : renderRestaurant}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
         ListHeaderComponent={
           <View>
-            <View style={styles.timeRangeRow}>
-              {TIME_RANGES.map(({ value, label }) => (
-                <Chip
-                  key={value}
-                  selected={timeRange === value}
-                  onPress={() => setTimeRange(value)}
-                  style={[styles.timeChip, timeRange === value && styles.timeChipSelected]}
-                  textStyle={[
-                    styles.timeChipText,
-                    timeRange === value && styles.timeChipTextSelected,
-                  ]}
-                >
-                  {label}
-                </Chip>
-              ))}
+            <View style={styles.segment}>
+              {TIME_RANGES.map(({ value, label }) => {
+                const selected = timeRange === value;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => setTimeRange(value)}
+                    style={[styles.segmentItem, selected && styles.segmentItemSelected]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text
+                      style={[styles.segmentText, selected && styles.segmentTextSelected]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <View style={styles.metricsRow}>
@@ -215,7 +255,7 @@ export const RestaurantScreen: React.FC = () => {
                   title="Total Spend"
                   value={`${currencySymbol}${totalSpend.toFixed(0)}`}
                   icon="currency-usd"
-                  color={Colors.dineout}
+                  color={colors.dineout}
                 />
               </View>
               <View style={styles.metricWrapper}>
@@ -223,7 +263,7 @@ export const RestaurantScreen: React.FC = () => {
                   title="Total Visits"
                   value={totalVisits}
                   icon="map-marker-check"
-                  color={Colors.primary}
+                  color={colors.primary}
                 />
               </View>
               <View style={styles.metricWrapper}>
@@ -231,7 +271,7 @@ export const RestaurantScreen: React.FC = () => {
                   title="Unique Places"
                   value={uniquePlaces}
                   icon="store"
-                  color={Colors.home}
+                  color={colors.home}
                 />
               </View>
             </View>
@@ -252,7 +292,7 @@ export const RestaurantScreen: React.FC = () => {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="store-off" size={48} color={Colors.textMuted} />
+            <MaterialCommunityIcons name="store-off" size={48} color={colors.textMuted} />
             <Text style={styles.emptyText}>No restaurant visits yet</Text>
             <Text style={styles.emptySubtext}>
               Log a dine-out or takeout meal to start tracking
@@ -267,143 +307,82 @@ export const RestaurantScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  listContent: {
-    paddingBottom: Spacing.xl,
-  },
-  timeRangeRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.xs,
-    flexWrap: 'wrap',
-  },
-  timeChip: {
-    backgroundColor: Colors.surfaceVariant,
-  },
-  timeChipSelected: {
-    backgroundColor: Colors.primary,
-  },
-  timeChipText: {
-    fontSize: FontSize.sm,
-    color: Colors.text,
-  },
-  timeChipTextSelected: {
-    color: Colors.white,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  metricWrapper: {
-    flex: 1,
-  },
-  nudgeBanner: {
-    backgroundColor: Colors.takeoutLight,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  nudgeText: {
-    fontSize: FontSize.sm,
-    color: Colors.text,
-  },
-  restaurantCard: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    elevation: 1,
-  },
-  restaurantHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  restaurantInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  restaurantName: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.text,
-    flex: 1,
-  },
-  frequentBadge: {
-    backgroundColor: Colors.primaryLight,
-    height: 24,
-  },
-  frequentBadgeText: {
-    fontSize: FontSize.xs,
-    color: Colors.white,
-    fontWeight: '600',
-  },
-  cuisineText: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  restaurantStats: {
-    flexDirection: 'row',
-    marginTop: Spacing.sm,
-    gap: Spacing.lg,
-  },
-  stat: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: FontSize.md,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  statLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-  },
-  loadingText: {
-    marginTop: Spacing.md,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-    marginTop: Spacing.xxl,
-  },
-  emptyText: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: Spacing.md,
-  },
-  emptySubtext: {
-    fontSize: FontSize.md,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-    textAlign: 'center',
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    listContent: { paddingBottom: Spacing.xl },
+    segment: {
+      flexDirection: 'row',
+      marginHorizontal: Spacing.md,
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.sm,
+      backgroundColor: c.surfaceVariant,
+      borderRadius: BorderRadius.full,
+      padding: 3,
+    },
+    segmentItem: {
+      flex: 1,
+      paddingVertical: 7,
+      paddingHorizontal: 4,
+      borderRadius: BorderRadius.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    segmentItemSelected: { backgroundColor: c.primary },
+    segmentText: { fontFamily: Fonts.bodyMedium, fontSize: FontSize.xs, color: c.textSecondary },
+    segmentTextSelected: { color: c.white, fontFamily: Fonts.bodySemiBold },
+    metricsRow: { flexDirection: 'row', paddingHorizontal: Spacing.md, gap: Spacing.sm, marginBottom: Spacing.sm },
+    metricWrapper: { flex: 1 },
+    nudgeBanner: {
+      backgroundColor: c.takeoutLight,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.md,
+      borderRadius: BorderRadius.md,
+    },
+    nudgeText: { fontSize: FontSize.sm, color: c.text },
+    restaurantCard: {
+      backgroundColor: c.surface,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    compactCard: {
+      backgroundColor: c.surface,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.xs,
+      borderRadius: BorderRadius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    compactContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    compactInfo: { flex: 1, marginRight: Spacing.sm },
+    compactName: { fontFamily: Fonts.bodySemiBold, fontSize: FontSize.md, color: c.text },
+    compactMeta: { fontFamily: Fonts.body, fontSize: FontSize.xs, color: c.textMuted, marginTop: 2 },
+    restaurantHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    restaurantInfo: { flex: 1 },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+    restaurantName: { fontFamily: Fonts.display, fontSize: FontSize.lg, color: c.text, flex: 1 },
+    frequentPill: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: BorderRadius.full,
+      backgroundColor: c.primaryLight,
+    },
+    frequentPillText: { fontSize: FontSize.xs, color: c.white, fontWeight: '600' },
+    cuisineText: { fontFamily: Fonts.body, fontSize: FontSize.sm, color: c.textSecondary, marginTop: 2 },
+    restaurantStats: { flexDirection: 'row', marginTop: Spacing.sm, gap: Spacing.lg },
+    stat: { alignItems: 'center' },
+    statValue: { fontFamily: Fonts.bodySemiBold, fontSize: FontSize.md, color: c.text },
+    statLabel: { fontSize: FontSize.xs, color: c.textMuted },
+    loadingText: { marginTop: Spacing.md, fontSize: FontSize.md, color: c.textSecondary },
+    emptyList: { flexGrow: 1 },
+    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl, marginTop: Spacing.xxl },
+    emptyText: { fontFamily: Fonts.display, fontSize: FontSize.lg, color: c.textSecondary, marginTop: Spacing.md },
+    emptySubtext: { fontSize: FontSize.md, color: c.textMuted, marginTop: Spacing.xs, textAlign: 'center' },
+  });
 
 export default RestaurantScreen;

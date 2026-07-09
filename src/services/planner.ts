@@ -11,6 +11,29 @@ export function generateMealPlan(
   const start = parseISO(startDate);
   const today = new Date();
 
+  // Kids-tiffin dish pool: prefer dishes previously packed as kids tiffins,
+  // else fall back to favorites / simplest home dishes.
+  const includeKids = !!preferences.planKidsTiffin;
+  // Kids tiffins are planned ONLY from dishes previously logged as kids tiffins —
+  // never the household's general dishes. If there's no kids history yet, the
+  // kids slots stay empty (the user fills them, which seeds future plans).
+  const kidPool = Array.from(
+    new Set(recentMeals.filter((m) => m.audience === 'kids' && m.dishName).map((m) => m.dishName)),
+  );
+  let kidCursor = 0;
+  const nextKidDish = (avoid: string): string => {
+    if (kidPool.length === 0) return '';
+    for (let k = 0; k < kidPool.length; k++) {
+      const cand = kidPool[(kidCursor + k) % kidPool.length];
+      if (cand !== avoid) {
+        kidCursor = (kidCursor + k + 1) % kidPool.length;
+        return cand;
+      }
+    }
+    return kidPool[kidCursor % kidPool.length];
+  };
+  let lastKidDish = '';
+
   // Step 1: Filter out dishes made within avoidRepeatDays
   const recentDishNames = new Set(
     recentMeals
@@ -81,6 +104,13 @@ export function generateMealPlan(
       };
     }
 
+    let kidsEntry: MealPlan['kids'];
+    if (includeKids) {
+      const kidName = nextKidDish(lastKidDish);
+      lastKidDish = kidName;
+      kidsEntry = { dishName: kidName, sourceType: 'home', lastMadeDaysAgo: 0, isNew: false };
+    }
+
     plan.push({
       date: dateStr,
       lunch: {
@@ -90,6 +120,7 @@ export function generateMealPlan(
         isNew: lunchDish.dish.timesCooked === 0,
       },
       dinner: dinnerEntry,
+      ...(kidsEntry ? { kids: kidsEntry } : {}),
     });
   }
 

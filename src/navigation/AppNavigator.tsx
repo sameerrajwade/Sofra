@@ -3,10 +3,16 @@ import { StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Colors, FontSize } from '../config/theme';
+import { Colors, FontSize, Fonts } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 
-import type { RootStackParamList, MainTabParamList, HomeStackParamList } from './types';
+import type {
+  RootStackParamList,
+  MainTabParamList,
+  HomeStackParamList,
+  ProfileStackParamList,
+} from './types';
 
 // Screens
 import AuthScreen from '../screens/AuthScreen';
@@ -15,8 +21,12 @@ import CalendarScreen from '../screens/CalendarScreen';
 import PlanScreen from '../screens/PlanScreen';
 import InsightsScreen from '../screens/InsightsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import FamilyScreen from '../screens/FamilyScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import LegalScreen from '../screens/LegalScreen';
 import DishLibraryScreen from '../screens/DishLibraryScreen';
 import RestaurantScreen from '../screens/RestaurantScreen';
+import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import AddMealScreen from '../screens/AddMealScreen';
 import HouseholdSetupScreen from '../screens/HouseholdSetupScreen';
@@ -24,6 +34,48 @@ import HouseholdSetupScreen from '../screens/HouseholdSetupScreen';
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+
+// Header blended into the content background (no white bar/shadow), Fraunces title.
+const blendedHeader = (c: ReturnType<typeof useTheme>['colors']) =>
+  ({
+    headerStyle: { backgroundColor: c.background },
+    headerShadowVisible: false,
+    headerTintColor: c.primary,
+    headerTitleStyle: { fontFamily: Fonts.display, fontSize: 22, color: c.text },
+    headerTitleAlign: 'left' as const,
+    contentStyle: { backgroundColor: c.background },
+  }) as const;
+
+function ProfileStackNavigator() {
+  const { colors } = useTheme();
+  return (
+    <ProfileStack.Navigator screenOptions={blendedHeader(colors)}>
+      <ProfileStack.Screen
+        name="ProfileMain"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+      <ProfileStack.Screen
+        name="Family"
+        component={FamilyScreen}
+        options={{ title: 'Family' }}
+      />
+      <ProfileStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Settings' }}
+      />
+      <ProfileStack.Screen
+        name="Legal"
+        component={LegalScreen}
+        options={({ route }) => ({
+          title: route.params?.doc === 'privacy' ? 'Privacy Policy' : 'Terms of Service',
+        })}
+      />
+    </ProfileStack.Navigator>
+  );
+}
 
 const TAB_ICONS: Record<keyof MainTabParamList, string> = {
   Home: 'home',
@@ -34,18 +86,13 @@ const TAB_ICONS: Record<keyof MainTabParamList, string> = {
 };
 
 function HomeStackNavigator() {
+  const { colors } = useTheme();
   return (
-    <HomeStack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.text,
-        headerTitleStyle: { fontWeight: '600' },
-      }}
-    >
+    <HomeStack.Navigator screenOptions={blendedHeader(colors)}>
       <HomeStack.Screen
         name="HomeMain"
         component={HomeScreen}
-        options={{ title: 'ThaliPlan' }}
+        options={{ headerShown: false }}
       />
       <HomeStack.Screen
         name="DishLibrary"
@@ -58,6 +105,11 @@ function HomeStackNavigator() {
         options={{ title: 'Restaurants' }}
       />
       <HomeStack.Screen
+        name="RestaurantDetail"
+        component={RestaurantDetailScreen}
+        options={{ title: 'Restaurant' }}
+      />
+      <HomeStack.Screen
         name="History"
         component={HistoryScreen}
         options={{ title: 'History' }}
@@ -67,6 +119,16 @@ function HomeStackNavigator() {
 }
 
 function MainTabs() {
+  const { colors } = useTheme();
+  const tabHeader = (title: string) => ({
+    headerShown: true,
+    headerTitle: title,
+    headerStyle: { backgroundColor: colors.background },
+    headerShadowVisible: false,
+    headerTintColor: colors.text,
+    headerTitleStyle: { fontFamily: Fonts.display, fontSize: 22, color: colors.text },
+    headerTitleAlign: 'left' as const,
+  });
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -77,30 +139,48 @@ function MainTabs() {
             color={color}
           />
         ),
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.border }],
         tabBarLabelStyle: styles.tabLabel,
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Home" component={HomeStackNavigator} />
+      <Tab.Screen
+        name="Home"
+        component={HomeStackNavigator}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Always reset Home stack to root when the Home tab is tapped
+            navigation.navigate('Home', { screen: 'HomeMain' });
+          },
+        })}
+      />
       <Tab.Screen
         name="Calendar"
         component={CalendarScreen}
-        options={{ headerShown: true, headerTitle: 'Calendar' }}
+        options={tabHeader('Calendar')}
       />
       <Tab.Screen
         name="Plan"
         component={PlanScreen}
-        options={{ headerShown: true, headerTitle: 'Meal Plan' }}
+        options={{ headerShown: false }}
       />
       <Tab.Screen
         name="Insights"
         component={InsightsScreen}
-        options={{ headerShown: true, headerTitle: 'Insights' }}
+        options={tabHeader('Insights')}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ headerTitle: 'Profile' }} />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStackNavigator}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Reset the Profile stack to root when the tab is tapped
+            navigation.navigate('Profile', { screen: 'ProfileMain' });
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }

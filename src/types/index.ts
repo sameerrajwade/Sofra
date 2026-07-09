@@ -28,12 +28,24 @@ export interface Household {
   createdAt: Date;
 }
 
+// One dish within a meal, with an optional 1–5 star rating (used mainly for
+// dine-out / takeout where multiple dishes are ordered).
+export interface MealItem {
+  name: string;
+  rating?: number;
+}
+
+// Who the meal is for. 'kids' powers the Lean kids-tiffin track; absent = family.
+export type MealAudience = 'family' | 'kids';
+
 export interface Meal {
   id: string;
   date: string; // YYYY-MM-DD
   mealType: MealType;
   sourceType: SourceType;
-  dishName: string;
+  dishName: string; // primary/summary dish (items[0] when multiple)
+  items?: MealItem[]; // multiple dishes ordered, each with an optional rating
+  audience?: MealAudience; // 'kids' = kids tiffin track; undefined = family
   cuisineTag: CuisineTag;
   restaurantName?: string;
   cost?: number;
@@ -63,22 +75,22 @@ export interface Restaurant {
   totalSpend: number;
   lastVisitDate: string;
   householdId: string;
+  // Per-dish star ratings (1–5) the household assigns for this restaurant.
+  dishRatings?: Record<string, number>;
+}
+
+export interface MealPlanSlot {
+  dishName: string;
+  sourceType: SourceType;
+  lastMadeDaysAgo: number;
+  isNew: boolean;
 }
 
 export interface MealPlan {
   date: string;
-  lunch: {
-    dishName: string;
-    sourceType: SourceType;
-    lastMadeDaysAgo: number;
-    isNew: boolean;
-  };
-  dinner: {
-    dishName: string;
-    sourceType: SourceType;
-    lastMadeDaysAgo: number;
-    isNew: boolean;
-  };
+  lunch: MealPlanSlot;
+  dinner: MealPlanSlot;
+  kids?: MealPlanSlot; // Lean kids-tiffin track (only when planKidsTiffin is on)
 }
 
 export interface UserPreferences {
@@ -89,6 +101,7 @@ export interface UserPreferences {
   maxDineOutsPerWeek: number;
   avoidRepeatDays: number;
   includeNewDishes: boolean;
+  planKidsTiffin?: boolean; // include a kids tiffin track when generating plans
 }
 
 export interface InsightData {

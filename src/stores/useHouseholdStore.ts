@@ -50,20 +50,24 @@ export const useHouseholdStore = create<HouseholdState>((set) => ({
   joinHousehold: async (inviteCode, userId) => {
     set({ isLoading: true, error: null });
     try {
+      // Core join — this is the only operation that must succeed
       const id = await firestoreService.joinHousehold(inviteCode, userId);
-      const household = await firestoreService.getHousehold(id);
-      const members = await firestoreService.getHouseholdMembers(id);
+      // Update auth store immediately so the app knows the user has a household
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        useAuthStore.getState().setUser({ ...currentUser, householdId: id });
+      }
+      // Fetch household details — non-fatal if this fails
+      const [household, members] = await Promise.all([
+        firestoreService.getHousehold(id).catch(() => null),
+        firestoreService.getHouseholdMembers(id).catch(() => []),
+      ]);
       set({
         household,
         members,
         inviteCode: household?.inviteCode || null,
         isLoading: false,
       });
-      // Update auth store so the app knows the user now has a household
-      const currentUser = useAuthStore.getState().user;
-      if (currentUser) {
-        useAuthStore.getState().setUser({ ...currentUser, householdId: id });
-      }
     } catch (e: any) {
       set({ error: e.message, isLoading: false });
       throw e;
@@ -73,17 +77,15 @@ export const useHouseholdStore = create<HouseholdState>((set) => ({
   fetchHousehold: async (householdId, userId?) => {
     set({ isLoading: true, error: null });
     try {
-      const promises: [Promise<Household | null>, Promise<User[]>, Promise<UserPreferences | null>?] = [
+      // The household doc is the critical read; members/preferences are non-fatal.
+      // A single failed member read must never blank out the whole household.
+      const [household, members, preferences] = await Promise.all([
         firestoreService.getHousehold(householdId),
-        firestoreService.getHouseholdMembers(householdId),
-      ];
-      if (userId) {
-        promises.push(firestoreService.getUserPreferences(userId));
-      }
-      const results = await Promise.all(promises);
-      const household = results[0] as Household | null;
-      const members = results[1] as User[];
-      const preferences = results[2] as UserPreferences | null | undefined;
+        firestoreService.getHouseholdMembers(householdId).catch(() => [] as User[]),
+        userId
+          ? firestoreService.getUserPreferences(userId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
       set({
         household,
         members,
