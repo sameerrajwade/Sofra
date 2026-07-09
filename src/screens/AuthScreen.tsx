@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -25,7 +25,7 @@ type AuthMode = 'signIn' | 'signUp';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const VALUE_PROPS = [
-  { icon: 'chef-hat', title: 'Smart Meal Planning', desc: 'AI-powered weekly plans based on your preferences' },
+  { icon: 'chef-hat', title: 'Smart Meal Planning', desc: 'Personalized weekly plans from your cooking history' },
   { icon: 'chart-line', title: 'Track & Insights', desc: 'See spending patterns and cooking habits' },
   { icon: 'account-group', title: 'Family Friendly', desc: 'Plan meals for the whole household together' },
 ];
@@ -38,6 +38,12 @@ export const AuthScreen: React.FC = () => {
     useAuthStore();
 
   const [mode, setMode] = useState<AuthMode>('signIn');
+  const scrollRef = useRef<ScrollView>(null);
+  // Toggling sign-in ↔ sign-up keeps the scroll offset otherwise, which left the
+  // logo clipped when switching to the taller sign-up form. Reset to top on change.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [mode]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -122,6 +128,7 @@ export const AuthScreen: React.FC = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >

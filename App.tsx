@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StatusBar, View, ActivityIndicator, StyleSheet, Appearance } from 'react-native';
+import { StatusBar, View, Text, ActivityIndicator, StyleSheet, Appearance } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   NavigationContainer,
   DefaultTheme as NavLightTheme,
@@ -192,9 +193,16 @@ export default function App() {
   }, [setUser]);
 
   if (isInitializing || !fontsLoaded) {
+    // Branded cold-boot splash (fonts may not be ready yet, so the wordmark
+    // falls back to the system font for this brief moment).
     return (
       <View style={initStyles.container}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <View style={initStyles.logoCircle}>
+          <MaterialCommunityIcons name="silverware-fork-knife" size={40} color="#FFFFFF" />
+        </View>
+        <Text style={initStyles.brand}>Sofra</Text>
+        <Text style={initStyles.tagline}>Your family's meal memory</Text>
+        <ActivityIndicator size="small" color={Colors.primary} style={initStyles.spinner} />
       </View>
     );
   }
@@ -215,4 +223,25 @@ const initStyles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.background,
   },
+  logoCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brand: {
+    marginTop: 20,
+    fontSize: 34,
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 0.5,
+  },
+  tagline: {
+    marginTop: 6,
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  spinner: { marginTop: 28 },
 });

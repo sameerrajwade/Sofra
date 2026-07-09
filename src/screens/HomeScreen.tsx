@@ -10,6 +10,7 @@ import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/t
 import { useTheme } from '../hooks/useTheme';
 import { MetricCard } from '../components/MetricCard';
 import { MealCard } from '../components/MealCard';
+import { Skeleton } from '../components/Skeleton';
 import { ShareStatModal, ShareStat } from '../components/ShareStatModal';
 import { FadeSlideIn, PressableScale } from '../components/motion';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -42,7 +43,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
-  const { meals, isLoading: mealsLoading, fetchMeals } = useMealStore();
+  const { meals, isLoading: mealsLoading, fetchMeals, dedupeMeals } = useMealStore();
   const { dishes, fetchDishes } = useDishStore();
   const { preferences } = useHouseholdStore();
 
@@ -65,7 +66,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const loadData = useCallback(async (force = false) => {
     if (!householdId) return;
     await Promise.all([fetchMeals(householdId, prevMonthStart, today, force), fetchDishes(householdId)]);
-  }, [householdId, prevMonthStart, today, fetchMeals, fetchDishes]);
+    // Heal any duplicate meal docs so Home matches Calendar/Plan (which dedupe too).
+    await dedupeMeals(householdId).catch(() => {});
+  }, [householdId, prevMonthStart, today, fetchMeals, fetchDishes, dedupeMeals]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -135,8 +138,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     return MEAL_ORDER.filter((t) => base.has(t));
   }, [preferences, meals, today]);
 
+  // If duplicates briefly coexist (before dedupe heals them), keep the most
+  // recently updated one — the same record dedupeMeals will preserve — so Home
+  // never shows a different copy than Calendar/Plan.
+  const newestOf = (list: typeof meals) =>
+    list.reduce((a, b) => ((b.updatedAt?.getTime?.() ?? 0) >= (a.updatedAt?.getTime?.() ?? 0) ? b : a));
   const mealForToday = useCallback(
-    (t: MealType) => meals.find((m) => m.date === today && m.mealType === t && m.audience !== 'kids') ?? null,
+    (t: MealType) => {
+      const matches = meals.filter((m) => m.date === today && m.mealType === t && m.audience !== 'kids');
+      return matches.length ? newestOf(matches) : null;
+    },
     [meals, today],
   );
 
@@ -343,6 +354,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         <Text style={styles.sectionTitle}>Today's meals</Text>
+        {mealsLoading && meals.length === 0 ? (
+          <View style={styles.todayMeals}>
+            {[0, 1].map((i) => (
+              <View key={i}>
+                <Skeleton width={64} height={11} style={{ marginTop: Spacing.sm, marginBottom: Spacing.xs }} />
+                <Skeleton height={64} radius={BorderRadius.md} style={{ marginVertical: Spacing.xs }} />
+              </View>
+            ))}
+          </View>
+        ) : (
         <View style={styles.todayMeals}>
           {todayTypes.map((t) => {
             const meal = mealForToday(t);
@@ -361,6 +382,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             );
           })}
         </View>
+        )}
 
         {kidsForToday.length > 0 && (
           <>
