@@ -59,6 +59,19 @@ export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
 
+// Deletes the Firebase Auth user. May throw 'auth/requires-recent-login' if the
+// session is old — caller should surface a "sign in again" message.
+export async function deleteCurrentUser(): Promise<void> {
+  const current = auth.currentUser;
+  if (!current) return;
+  await current.delete();
+  try {
+    await GoogleSignin.signOut();
+  } catch {
+    // ignore
+  }
+}
+
 export function getCurrentUser(): FirebaseUser | null {
   return auth.currentUser;
 }

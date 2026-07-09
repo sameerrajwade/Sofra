@@ -10,20 +10,25 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { Text, TextInput, Button, ActivityIndicator } from 'react-native-paper';
-import { format, addDays, subDays, eachDayOfInterval, startOfMonth, endOfMonth, getDay } from 'date-fns';
-import { Colors, Spacing, FontSize, BorderRadius } from '../config/theme';
+import { Text, TextInput, Button } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDay } from 'date-fns';
+import { Spacing, FontSize, BorderRadius, Fonts, ThemeColors } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
 import { MealTypeToggle } from '../components/MealTypeToggle';
 import { SourceTypeToggle } from '../components/SourceTypeToggle';
 import { DishPicker } from '../components/DishPicker';
 import { CuisineChips } from '../components/CuisineChips';
+import { AudienceToggle } from '../components/AudienceToggle';
+import { StarRating } from '../components/StarRating';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useMealStore } from '../stores/useMealStore';
 import { useDishStore } from '../stores/useDishStore';
 import { useHouseholdStore } from '../stores/useHouseholdStore';
 import { getCurrencySymbol } from '../utils/currency';
+import { setRestaurantDishRating } from '../services/firestore';
 import type { RootStackScreenProps } from '../navigation/types';
-import type { MealType, SourceType, CuisineTag } from '../types';
+import type { Meal, MealType, SourceType, CuisineTag, MealItem, MealAudience } from '../types';
 import { toTitleCase } from '../utils/text';
 
 type Props = RootStackScreenProps<'AddMeal'>;
@@ -41,6 +46,9 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
   const existingMeal = route.params?.meal;
   const isEditing = !!(existingMeal && existingMeal.id);
+
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const { user } = useAuthStore();
   const householdId = user?.householdId ?? '';
@@ -61,6 +69,20 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
     existingMeal?.sourceType ?? 'home',
   );
   const [dishName, setDishName] = useState(existingMeal?.dishName ?? '');
+  const [audience, setAudience] = useState<MealAudience>(existingMeal?.audience ?? 'family');
+  // Extra dishes for a home meal (a thali: curry + bread + rice + dal). The main
+  // dish is `dishName`; these are the accompaniments. Stored together in `items`.
+  const [sides, setSides] = useState<string[]>(() =>
+    existingMeal?.sourceType === 'home' && existingMeal.items && existingMeal.items.length > 1
+      ? existingMeal.items.slice(1).map((i) => i.name)
+      : [],
+  );
+  // Dishes ordered at a restaurant (dine-out / takeout), each with a star rating.
+  const [items, setItems] = useState<MealItem[]>(() => {
+    if (existingMeal?.items?.length) return existingMeal.items.map((i) => ({ ...i }));
+    if (existingMeal?.dishName) return [{ name: existingMeal.dishName }];
+    return [{ name: '' }];
+  });
   const [cuisineTag, setCuisineTag] = useState<CuisineTag>(
     existingMeal?.cuisineTag ?? 'Indian',
   );
@@ -96,6 +118,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
           isFavorite: false,
           timesCooked: 1,
           lastCookedDate: m.date,
+          householdId: m.householdId,
         });
       }
     });
@@ -123,6 +146,27 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
     [allKnownDishes],
   );
 
+  const setItemName = useCallback((idx: number, name: string) => {
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, name } : it)));
+  }, []);
+  const setItemRating = useCallback((idx: number, rating: number) => {
+    setItems((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, rating: it.rating === rating ? undefined : rating } : it)),
+    );
+  }, []);
+  const addItemRow = useCallback(() => setItems((prev) => [...prev, { name: '' }]), []);
+  const removeItemRow = useCallback((idx: number) => {
+    setItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
+  }, []);
+
+  const setSide = useCallback((idx: number, name: string) => {
+    setSides((prev) => prev.map((s, i) => (i === idx ? name : s)));
+  }, []);
+  const addSide = useCallback(() => setSides((prev) => [...prev, '']), []);
+  const removeSide = useCallback((idx: number) => {
+    setSides((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
   // Date picker calendar data
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(pickerMonth);
@@ -139,40 +183,78 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!dishName.trim()) {
-      Alert.alert('Validation', 'Dish name is required.');
-      return;
-    }
     if (!householdId) {
       Alert.alert('Error', 'No household set up.');
       return;
     }
 
+    const isOutside = sourceType === 'takeout' || sourceType === 'dineout';
+
+    // Dish name is required for home meals, but optional for takeout/dine-out
+    // (you may just be logging a restaurant visit).
+    if (!isOutside && !dishName.trim()) {
+      Alert.alert('Validation', 'Dish name is required.');
+      return;
+    }
+    if (isOutside && !restaurantName.trim()) {
+      Alert.alert('Validation', 'Restaurant name is required for takeout and dine-out meals.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const isOutside = sourceType === 'takeout' || sourceType === 'dineout';
-      if (isOutside && !restaurantName.trim()) {
-        Alert.alert('Validation', 'Restaurant name is required for takeout and dine-out meals.');
-        return;
-      }
+      // For outside meals, collect the multiple dishes ordered (each may carry a
+      // star rating). For home meals, the single dish field is authoritative.
+      const cleanItems: MealItem[] = isOutside
+        ? items
+            .map((it) => ({ name: toTitleCase(it.name.trim()), rating: it.rating }))
+            .filter((it) => it.name.length > 0)
+        : [];
 
-      const mealData = {
+      // Home meals: main dish + optional sides (a thali). Stored in `items`.
+      const homeItems: MealItem[] = !isOutside
+        ? [dishName, ...sides]
+            .map((n) => ({ name: toTitleCase(n.trim()) }))
+            .filter((it) => it.name.length > 0)
+        : [];
+
+      // Fall back to the restaurant name when no dish was entered for an
+      // outside meal, so history/insights still have something to show.
+      const resolvedDishName = isOutside
+        ? cleanItems[0]?.name || restaurantName.trim()
+        : toTitleCase(dishName.trim());
+
+      const mealData: Omit<Meal, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'householdId'> = {
         date,
         mealType,
         sourceType,
-        dishName: toTitleCase(dishName.trim()),
+        dishName: resolvedDishName,
         cuisineTag,
         restaurantName: isOutside ? restaurantName.trim() : '',
         cost: isOutside && cost ? parseFloat(cost) : 0,
         notes: notes.trim() || '',
+        audience,
+        ...(isOutside && cleanItems.length > 0 ? { items: cleanItems } : {}),
+        ...(!isOutside && homeItems.length > 1 ? { items: homeItems } : {}),
       };
+
+      // Persist per-dish star ratings onto the restaurant ("what to take/avoid").
+      if (isOutside && restaurantName.trim()) {
+        const rest = restaurantName.trim();
+        await Promise.all(
+          cleanItems
+            .filter((it) => it.rating)
+            .map((it) => setRestaurantDishRating(householdId, rest, it.name, it.rating!).catch(() => {})),
+        );
+      }
 
       if (isEditing && existingMeal) {
         await updateMeal(householdId, existingMeal.id, mealData);
       } else {
-        // Check for duplicate meal (same date + mealType)
+        // Check for duplicate meal (same date + type + audience — family and
+        // kids can each have their own entry in the same slot).
         const existingForSlot = useMealStore.getState().meals.find(
-          (m) => m.date === date && m.mealType === mealType,
+          (m) => m.date === date && m.mealType === mealType && (m.audience ?? 'family') === audience,
         );
         if (existingForSlot) {
           await new Promise<void>((resolve, reject) => {
@@ -214,7 +296,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
   }, [
     dishName, householdId, isEditing, existingMeal, date, mealType,
     sourceType, cuisineTag, restaurantName, cost, notes, user,
-    addMeal, updateMeal, navigation,
+    items, sides, audience, addMeal, updateMeal, navigation,
   ]);
 
   const handleDelete = useCallback(() => {
@@ -310,30 +392,66 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
                   );
                 })}
               </View>
-              <Button mode="text" onPress={() => setShowDatePicker(false)} textColor={Colors.textSecondary}>
+              <Button mode="text" onPress={() => setShowDatePicker(false)} textColor={colors.textSecondary}>
                 Cancel
               </Button>
             </View>
           </View>
         </Modal>
 
+        {/* Audience — family or kids tiffin */}
+        <Text style={styles.label}>For</Text>
+        <AudienceToggle selected={audience} onSelect={setAudience} />
+
         {/* Meal Type */}
-        <Text style={styles.label}>Meal Type</Text>
+        <Text style={[styles.label, { marginTop: Spacing.md }]}>Meal Type</Text>
         <MealTypeToggle selected={mealType} onSelect={setMealType} />
 
         {/* Source Type */}
         <Text style={[styles.label, { marginTop: Spacing.md }]}>Source</Text>
         <SourceTypeToggle selected={sourceType} onSelect={setSourceType} />
 
-        {/* Dish Name */}
-        <Text style={[styles.label, { marginTop: Spacing.md }]}>Dish</Text>
-        <DishPicker
-          value={dishName}
-          onChangeText={setDishName}
-          dishes={allKnownDishes}
-          recentDishes={recentDishNames}
-          onSelectDish={handleSelectDish}
-        />
+        {/* Dish Name — single field for home; outside meals use the multi-dish
+            editor inside the restaurant block below. */}
+        {sourceType === 'home' && (
+          <>
+            <Text style={[styles.label, { marginTop: Spacing.md }]}>Dish</Text>
+            <DishPicker
+              value={dishName}
+              onChangeText={setDishName}
+              dishes={allKnownDishes}
+              recentDishes={recentDishNames}
+              onSelectDish={handleSelectDish}
+            />
+            {/* Optional accompaniments — a full thali (curry + bread + rice + dal) */}
+            {sides.map((s, idx) => (
+              <View key={idx} style={styles.sideRow}>
+                <TextInput
+                  value={s}
+                  onChangeText={(t) => setSide(idx, t)}
+                  mode="outlined"
+                  dense
+                  style={styles.sideInput}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                  placeholder={`Side dish ${idx + 1} (e.g. Rice, Roti, Dal)`}
+                  accessibilityLabel={`Side dish ${idx + 1}`}
+                />
+                <TouchableOpacity
+                  onPress={() => removeSide(idx)}
+                  style={styles.dishItemRemove}
+                  accessibilityLabel={`Remove side dish ${idx + 1}`}
+                >
+                  <MaterialCommunityIcons name="close" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity onPress={addSide} style={styles.addDishRow} accessibilityLabel="Add a side dish">
+              <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.primary} />
+              <Text style={styles.addDishText}>Add side dish</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* Cuisine */}
         <Text style={[styles.label, { marginTop: Spacing.md }]}>Cuisine</Text>
@@ -348,11 +466,49 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
               onChangeText={setRestaurantName}
               mode="outlined"
               style={styles.input}
-              outlineColor={Colors.border}
-              activeOutlineColor={Colors.primary}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
               placeholder="Restaurant name"
               accessibilityLabel="Restaurant name"
             />
+
+            {/* Dishes ordered — multiple, each with an optional star rating */}
+            <Text style={[styles.label, { marginTop: Spacing.md }]}>Dishes ordered (optional)</Text>
+            {items.map((it, idx) => (
+              <View key={idx} style={styles.dishItemRow}>
+                <View style={styles.dishItemMain}>
+                  <TextInput
+                    value={it.name}
+                    onChangeText={(t) => setItemName(idx, t)}
+                    mode="outlined"
+                    dense
+                    style={styles.dishItemInput}
+                    outlineColor={colors.border}
+                    activeOutlineColor={colors.primary}
+                    placeholder={`Dish ${idx + 1}`}
+                    accessibilityLabel={`Dish ${idx + 1} name`}
+                  />
+                  {items.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => removeItemRow(idx)}
+                      style={styles.dishItemRemove}
+                      accessibilityLabel={`Remove dish ${idx + 1}`}
+                    >
+                      <MaterialCommunityIcons name="close" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <StarRating
+                  rating={it.rating}
+                  onRate={(n) => setItemRating(idx, n)}
+                  size={20}
+                />
+              </View>
+            ))}
+            <TouchableOpacity onPress={addItemRow} style={styles.addDishRow} accessibilityLabel="Add another dish">
+              <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.primary} />
+              <Text style={styles.addDishText}>Add another dish</Text>
+            </TouchableOpacity>
 
             <Text style={styles.label}>Cost</Text>
             <TextInput
@@ -360,8 +516,8 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
               onChangeText={setCost}
               mode="outlined"
               style={styles.input}
-              outlineColor={Colors.border}
-              activeOutlineColor={Colors.primary}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
               placeholder="0.00"
               keyboardType="decimal-pad"
               left={<TextInput.Affix text={currencySymbol} />}
@@ -377,8 +533,8 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
           onChangeText={setNotes}
           mode="outlined"
           style={[styles.input, styles.notesInput]}
-          outlineColor={Colors.border}
-          activeOutlineColor={Colors.primary}
+          outlineColor={colors.border}
+          activeOutlineColor={colors.primary}
           placeholder="Optional notes..."
           multiline
           numberOfLines={3}
@@ -392,8 +548,8 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
             onPress={handleSave}
             loading={isSaving}
             disabled={isSaving}
-            buttonColor={Colors.primary}
-            textColor={Colors.white}
+            buttonColor={colors.primary}
+            textColor={colors.white}
             style={styles.saveButton}
             contentStyle={styles.buttonContent}
           >
@@ -405,7 +561,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
             onPress={() => navigation.goBack()}
             disabled={isSaving}
             style={styles.cancelButton}
-            textColor={Colors.textSecondary}
+            textColor={colors.textSecondary}
           >
             Cancel
           </Button>
@@ -415,7 +571,7 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
               mode="text"
               onPress={handleDelete}
               disabled={isSaving}
-              textColor={Colors.error}
+              textColor={colors.error}
               style={styles.deleteButton}
             >
               Delete Meal
@@ -427,130 +583,154 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
-  },
-  heading: {
-    fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.xs,
-  },
-  notesInput: {
-    minHeight: 80,
-  },
-  dateButton: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-  },
-  dateButtonText: {
-    fontSize: FontSize.md,
-    color: Colors.text,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    width: 320,
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  pickerNav: {
-    fontSize: FontSize.xl,
-    fontWeight: '700',
-    color: Colors.primary,
-    paddingHorizontal: Spacing.md,
-  },
-  pickerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  dayNamesRow: {
-    flexDirection: 'row',
-    marginBottom: Spacing.xs,
-  },
-  dayNameText: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: Spacing.md,
-  },
-  calendarCell: {
-    width: '14.28%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendarCellSelected: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.full,
-  },
-  calendarDayText: {
-    fontSize: FontSize.md,
-    color: Colors.text,
-  },
-  calendarDayTextSelected: {
-    color: Colors.white,
-    fontWeight: '700',
-  },
-  actions: {
-    marginTop: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  saveButton: {
-    borderRadius: BorderRadius.md,
-  },
-  buttonContent: {
-    paddingVertical: Spacing.xs,
-  },
-  cancelButton: {
-    borderRadius: BorderRadius.md,
-    borderColor: Colors.border,
-  },
-  deleteButton: {
-    marginTop: Spacing.sm,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xxl,
+    },
+    heading: {
+      fontFamily: Fonts.display,
+      fontSize: FontSize.xxl,
+      color: c.text,
+      marginBottom: Spacing.lg,
+    },
+    label: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.textSecondary,
+      marginBottom: Spacing.xs,
+      marginTop: Spacing.sm,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    input: {
+      backgroundColor: c.surface,
+      marginBottom: Spacing.xs,
+    },
+    notesInput: {
+      minHeight: 80,
+    },
+    dishItemRow: {
+      marginBottom: Spacing.sm,
+      backgroundColor: c.surface,
+      borderRadius: BorderRadius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+      padding: Spacing.sm,
+    },
+    sideRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
+    sideInput: { flex: 1, backgroundColor: c.surface },
+    dishItemMain: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+    dishItemInput: { flex: 1, backgroundColor: c.surface },
+    dishItemRemove: { padding: Spacing.xs },
+    addDishRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: Spacing.xs,
+      marginBottom: Spacing.sm,
+    },
+    addDishText: { fontFamily: Fonts.bodySemiBold, fontSize: FontSize.sm, color: c.primary },
+    dateButton: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: BorderRadius.md,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.xs,
+    },
+    dateButtonText: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.text,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: c.surface,
+      borderRadius: BorderRadius.lg,
+      padding: Spacing.lg,
+      width: 320,
+    },
+    pickerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    pickerNav: {
+      fontSize: FontSize.xl,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.primary,
+      paddingHorizontal: Spacing.md,
+    },
+    pickerTitle: {
+      fontSize: FontSize.lg,
+      fontFamily: Fonts.display,
+      color: c.text,
+    },
+    dayNamesRow: {
+      flexDirection: 'row',
+      marginBottom: Spacing.xs,
+    },
+    dayNameText: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.textMuted,
+    },
+    calendarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: Spacing.md,
+    },
+    calendarCell: {
+      width: '14.28%',
+      aspectRatio: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    calendarCellSelected: {
+      backgroundColor: c.primary,
+      borderRadius: BorderRadius.full,
+    },
+    calendarDayText: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.text,
+    },
+    calendarDayTextSelected: {
+      color: c.white,
+      fontFamily: Fonts.bodySemiBold,
+    },
+    actions: {
+      marginTop: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    saveButton: {
+      borderRadius: BorderRadius.md,
+    },
+    buttonContent: {
+      paddingVertical: Spacing.xs,
+    },
+    cancelButton: {
+      borderRadius: BorderRadius.md,
+      borderColor: c.border,
+    },
+    deleteButton: {
+      marginTop: Spacing.sm,
+    },
+  });
 
 export default AddMealScreen;

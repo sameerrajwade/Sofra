@@ -11,20 +11,19 @@ import { Searchbar, Text, Chip, ActivityIndicator, Button } from 'react-native-p
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Meal, SourceType } from '../types';
 import {
-  Colors,
   Spacing,
   FontSize,
   BorderRadius,
-  sourceTypeColor,
+  Fonts,
+  ThemeColors,
   sourceTypeLabel,
 } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
+import { sourceIcon } from '../utils/icons';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useMealStore } from '../stores/useMealStore';
 import { useHouseholdStore } from '../stores/useHouseholdStore';
 import { getCurrencySymbol } from '../utils/currency';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { HomeStackParamList, RootStackParamList } from '../navigation/types';
-import type { CompositeNavigationProp } from '@react-navigation/native';
 
 type SourceFilter = 'all' | SourceType;
 
@@ -48,11 +47,27 @@ const formatDayLabel = (dateStr: string): string => {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
+const srcColor = (c: ThemeColors, type: string) => {
+  switch (type) {
+    case 'home':
+      return c.home;
+    case 'takeout':
+      return c.takeout;
+    case 'dineout':
+      return c.dineout;
+    default:
+      return c.textSecondary;
+  }
+};
+
 interface Props {
   navigation: any;
 }
 
 export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const { user } = useAuthStore();
   const { meals, isLoading, fetchMealsByDateRange } = useMealStore();
   const { preferences } = useHouseholdStore();
@@ -143,7 +158,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
       .join('\n');
 
     try {
-      await Share.share({ message: header + rows, title: 'ThaliPlan Meal History' });
+      await Share.share({ message: header + rows, title: 'Sofra Meal History' });
     } catch {
       Alert.alert('Error', 'Could not share data.');
     }
@@ -180,7 +195,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
       );
     }
 
-    const chipColor = sourceTypeColor(meal.sourceType);
+    const chipColor = srcColor(colors, meal.sourceType);
     return (
       <TouchableOpacity
         style={styles.mealCell}
@@ -191,8 +206,12 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.mealDishName} numberOfLines={1}>
           {meal.dishName}
         </Text>
+        {meal.items && meal.items.length > 1 && (
+          <Text style={styles.itemsMore}>+{meal.items.length - 1} more</Text>
+        )}
         <View style={styles.mealBadgeRow}>
           <View style={[styles.sourceBadge, { backgroundColor: chipColor }]}>
+            <MaterialCommunityIcons name={sourceIcon(meal.sourceType) as any} size={10} color={colors.white} />
             <Text style={styles.sourceBadgeText}>{sourceTypeLabel(meal.sourceType)}</Text>
           </View>
           {meal.cost !== undefined && meal.cost > 0 && (
@@ -205,8 +224,9 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderDayGroup = useCallback(
     ({ item }: { item: DayGroup }) => {
-      const lunch = item.meals.find((m) => m.mealType === 'lunch');
-      const dinner = item.meals.find((m) => m.mealType === 'dinner');
+      // Show family meals in the grid; kids tiffins live in their own views.
+      const lunch = item.meals.find((m) => m.mealType === 'lunch' && m.audience !== 'kids');
+      const dinner = item.meals.find((m) => m.mealType === 'dinner' && m.audience !== 'kids');
 
       return (
         <View style={styles.dayRow}>
@@ -218,7 +238,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       );
     },
-    [currencySymbol, handleMealPress],
+    [currencySymbol, handleMealPress, colors, styles],
   );
 
   const renderSectionHeader = useCallback(
@@ -227,23 +247,23 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.sectionTitle}>{section.title}</Text>
       </View>
     ),
-    [],
+    [styles],
   );
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
-          <MaterialCommunityIcons name="export-variant" size={24} color={Colors.primary} />
+          <MaterialCommunityIcons name="export-variant" size={24} color={colors.primary} />
         </TouchableOpacity>
       ),
     });
-  }, [navigation, handleExport]);
+  }, [navigation, handleExport, colors, styles]);
 
   if (isLoading && meals.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading history...</Text>
       </View>
     );
@@ -282,6 +302,8 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
         onChangeText={setSearch}
         style={styles.searchbar}
         inputStyle={styles.searchInput}
+        iconColor={colors.textSecondary}
+        placeholderTextColor={colors.textMuted}
       />
 
       <SectionList
@@ -293,7 +315,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="history" size={48} color={Colors.textMuted} />
+            <MaterialCommunityIcons name="history" size={48} color={colors.textMuted} />
             <Text style={styles.emptyText}>No meal history</Text>
             <Text style={styles.emptySubtext}>
               {search ? 'Try a different search' : 'Start logging meals to see your history'}
@@ -304,7 +326,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
           isLoading ? (
             <ActivityIndicator
               size="small"
-              color={Colors.primary}
+              color={colors.primary}
               style={styles.footerLoader}
             />
           ) : null
@@ -316,151 +338,168 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  filterChip: {
-    backgroundColor: Colors.surfaceVariant,
-  },
-  filterChipSelected: {
-    backgroundColor: Colors.primary,
-  },
-  filterChipText: {
-    fontSize: FontSize.sm,
-    color: Colors.text,
-  },
-  filterChipTextSelected: {
-    color: Colors.white,
-  },
-  searchbar: {
-    margin: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    elevation: 1,
-  },
-  searchInput: {
-    fontSize: FontSize.md,
-  },
-  sectionHeader: {
-    backgroundColor: Colors.background,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  sectionTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  dayRow: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-    elevation: 1,
-  },
-  dayLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  mealsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  mealCell: {
-    flex: 1,
-    backgroundColor: Colors.surfaceVariant,
-    borderRadius: BorderRadius.sm,
-    padding: Spacing.sm,
-  },
-  mealTypeLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  mealDishName: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  emptyMealText: {
-    fontSize: FontSize.md,
-    color: Colors.textMuted,
-  },
-  mealBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  sourceBadge: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
-  },
-  sourceBadgeText: {
-    fontSize: FontSize.xs,
-    color: Colors.white,
-    fontWeight: '600',
-  },
-  mealCost: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  headerButton: {
-    marginRight: Spacing.md,
-    padding: Spacing.xs,
-  },
-  loadingText: {
-    marginTop: Spacing.md,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-    marginTop: Spacing.xxl,
-  },
-  emptyText: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: Spacing.md,
-  },
-  emptySubtext: {
-    fontSize: FontSize.md,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-    textAlign: 'center',
-  },
-  footerLoader: {
-    paddingVertical: Spacing.lg,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    filterRow: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
+      gap: Spacing.xs,
+    },
+    filterChip: {
+      backgroundColor: c.surfaceVariant,
+    },
+    filterChipSelected: {
+      backgroundColor: c.primary,
+    },
+    filterChipText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.text,
+    },
+    filterChipTextSelected: {
+      color: c.white,
+    },
+    searchbar: {
+      margin: Spacing.md,
+      backgroundColor: c.surface,
+      borderRadius: BorderRadius.md,
+      elevation: 1,
+    },
+    searchInput: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.text,
+    },
+    sectionHeader: {
+      backgroundColor: c.background,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    sectionTitle: {
+      fontSize: FontSize.lg,
+      fontFamily: Fonts.display,
+      color: c.text,
+    },
+    dayRow: {
+      backgroundColor: c.surface,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.xs,
+      borderRadius: BorderRadius.md,
+      padding: Spacing.sm,
+      elevation: 1,
+    },
+    dayLabel: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    mealsRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    mealCell: {
+      flex: 1,
+      backgroundColor: c.surfaceVariant,
+      borderRadius: BorderRadius.sm,
+      padding: Spacing.sm,
+    },
+    mealTypeLabel: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.bodyMedium,
+      color: c.textMuted,
+      textTransform: 'uppercase',
+      marginBottom: 2,
+    },
+    mealDishName: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.text,
+      marginBottom: Spacing.xs,
+    },
+    emptyMealText: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.textMuted,
+    },
+    mealBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    sourceBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.sm,
+    },
+    sourceBadgeText: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.white,
+    },
+    mealCost: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.bodySemiBold,
+      color: c.textSecondary,
+    },
+    itemsMore: {
+      fontSize: FontSize.xs,
+      fontFamily: Fonts.body,
+      color: c.textMuted,
+      marginBottom: 2,
+    },
+    headerButton: {
+      marginRight: Spacing.md,
+      padding: Spacing.xs,
+    },
+    loadingText: {
+      marginTop: Spacing.md,
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.textSecondary,
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+      marginTop: Spacing.xxl,
+    },
+    emptyText: {
+      fontSize: FontSize.lg,
+      fontFamily: Fonts.displayMedium,
+      color: c.textSecondary,
+      marginTop: Spacing.md,
+    },
+    emptySubtext: {
+      fontSize: FontSize.md,
+      fontFamily: Fonts.body,
+      color: c.textMuted,
+      marginTop: Spacing.xs,
+      textAlign: 'center',
+    },
+    footerLoader: {
+      paddingVertical: Spacing.lg,
+    },
+  });
 
 export default HistoryScreen;

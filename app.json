@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ThaliPlan",
+    "name": "Sofra",
     "slug": "thaliplan",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#534AB7"
+      "backgroundColor": "#FBF7F2"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#534AB7"
+        "backgroundColor": "#C0532E"
       },
       "package": "com.thaliplan.app"
     },

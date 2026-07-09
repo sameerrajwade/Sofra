@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Chip, TextInput } from 'react-native-paper';
 import { CuisineTag } from '../types';
-import { Colors, Spacing, FontSize, BorderRadius } from '../config/theme';
+import { Spacing, FontSize, Fonts, ThemeColors } from '../config/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface CuisineChipsProps {
   selected: CuisineTag;
@@ -10,6 +11,7 @@ interface CuisineChipsProps {
   customTags?: string[];
 }
 
+// Curated popular GLOBAL cuisines (not exhaustive). Anything else → "Other" textbox.
 const DEFAULT_TAGS: CuisineTag[] = [
   'Indian',
   'Chinese',
@@ -18,6 +20,12 @@ const DEFAULT_TAGS: CuisineTag[] = [
   'American',
   'Thai',
   'Japanese',
+  'Mediterranean',
+  'Korean',
+  'Middle Eastern',
+  'French',
+  'Vietnamese',
+  'Continental',
 ];
 
 export const CuisineChips: React.FC<CuisineChipsProps> = ({
@@ -25,6 +33,8 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
   onSelect,
   customTags = [],
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customValue, setCustomValue] = useState('');
 
@@ -39,13 +49,12 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
     }
   };
 
+  const isCustomSelected =
+    !!selected && !DEFAULT_TAGS.includes(selected) && !customTags.includes(selected);
+
   return (
     <View style={styles.container} accessibilityLabel="Cuisine selector">
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsRow}
-      >
+      <View style={styles.chipsRow}>
         {allTags.map((tag) => {
           const isSelected = selected === tag;
           return (
@@ -63,14 +72,15 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
         })}
         <Chip
           icon="plus"
-          onPress={() => setShowCustomInput(!showCustomInput)}
-          style={styles.addChip}
-          textStyle={styles.addChipText}
-          accessibilityLabel="Add custom cuisine"
+          selected={isCustomSelected}
+          onPress={() => setShowCustomInput((v) => !v)}
+          style={[styles.addChip, isCustomSelected && styles.chipSelected]}
+          textStyle={[styles.addChipText, isCustomSelected && styles.chipTextSelected]}
+          accessibilityLabel="Other cuisine"
         >
-          Custom
+          {isCustomSelected ? selected : 'Other'}
         </Chip>
-      </ScrollView>
+      </View>
 
       {showCustomInput && (
         <View style={styles.customInputRow}>
@@ -81,8 +91,8 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
             mode="outlined"
             dense
             style={styles.customInput}
-            outlineColor={Colors.border}
-            activeOutlineColor={Colors.primary}
+            outlineColor={colors.border}
+            activeOutlineColor={colors.primary}
             onSubmitEditing={handleAddCustom}
             returnKeyType="done"
             accessibilityLabel="Custom cuisine name"
@@ -93,42 +103,46 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {},
-  chipsRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
-  },
-  chip: {
-    backgroundColor: Colors.surfaceVariant,
-  },
-  chipSelected: {
-    backgroundColor: Colors.primary,
-  },
-  chipText: {
-    fontSize: FontSize.sm,
-    color: Colors.text,
-  },
-  chipTextSelected: {
-    color: Colors.white,
-  },
-  addChip: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-  },
-  addChipText: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-  },
-  customInputRow: {
-    marginTop: Spacing.sm,
-  },
-  customInput: {
-    backgroundColor: Colors.surface,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {},
+    chipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.xs,
+      paddingVertical: Spacing.xs,
+    },
+    chip: {
+      backgroundColor: c.surfaceVariant,
+    },
+    chipSelected: {
+      backgroundColor: c.primary,
+    },
+    chipText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.text,
+    },
+    chipTextSelected: {
+      color: c.white,
+    },
+    addChip: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderStyle: 'dashed',
+    },
+    addChipText: {
+      fontSize: FontSize.sm,
+      fontFamily: Fonts.bodyMedium,
+      color: c.textSecondary,
+    },
+    customInputRow: {
+      marginTop: Spacing.sm,
+    },
+    customInput: {
+      backgroundColor: c.surface,
+    },
+  });
 
 export default CuisineChips;

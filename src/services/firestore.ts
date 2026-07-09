@@ -39,6 +39,15 @@ function toDate(ts: any): Date {
   return ts instanceof Timestamp ? ts.toDate() : new Date(ts);
 }
 
+// Firestore rejects `undefined` field values — drop them before writing.
+function stripUndefined<T extends Record<string, any>>(obj: T): T {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out as T;
+}
+
 function mealFromDoc(docSnap: any): Meal {
   const d = docSnap.data();
   return {
@@ -57,7 +66,7 @@ export async function addMeal(
 ): Promise<string> {
   const now = Timestamp.now();
   const ref = await addDoc(mealsCol(householdId), {
-    ...meal,
+    ...stripUndefined(meal),
     householdId,
     createdAt: now,
     updatedAt: now,
@@ -71,7 +80,7 @@ export async function updateMeal(
   data: Partial<Meal>,
 ): Promise<void> {
   const ref = doc(db, `households/${householdId}/meals`, mealId);
-  await updateDoc(ref, { ...data, updatedAt: Timestamp.now() });
+  await updateDoc(ref, { ...stripUndefined(data), updatedAt: Timestamp.now() });
 }
 
 export async function deleteMeal(
@@ -205,6 +214,43 @@ export async function getRestaurants(householdId: string): Promise<Restaurant[]>
   return snap.docs.map((d) => ({ ...d.data(), id: d.id } as Restaurant));
 }
 
+export async function getRestaurantByName(
+  householdId: string,
+  name: string,
+): Promise<Restaurant | null> {
+  const q = query(restaurantsCol(householdId), where('name', '==', name));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { ...d.data(), id: d.id } as Restaurant;
+}
+
+// Set a per-dish star rating for a restaurant (creates the doc if missing).
+export async function setRestaurantDishRating(
+  householdId: string,
+  name: string,
+  dishName: string,
+  rating: number,
+): Promise<void> {
+  const q = query(restaurantsCol(householdId), where('name', '==', name));
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    await addDoc(restaurantsCol(householdId), {
+      name,
+      cuisineType: '',
+      totalVisits: 0,
+      totalSpend: 0,
+      lastVisitDate: '',
+      householdId,
+      dishRatings: { [dishName]: rating },
+    });
+    return;
+  }
+  const ref = snap.docs[0].ref;
+  const existing = (snap.docs[0].data().dishRatings ?? {}) as Record<string, number>;
+  await updateDoc(ref, { dishRatings: { ...existing, [dishName]: rating } });
+}
+
 // ─── Households ───
 
 function generateInviteCode(): string {
@@ -251,6 +297,31 @@ export async function joinHousehold(
   return householdDoc.id;
 }
 
+// Remove a user from their household's member list (used by leave + delete-account).
+export async function leaveHousehold(
+  householdId: string,
+  userId: string,
+): Promise<void> {
+  const ref = doc(db, 'households', householdId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as Household;
+  const remaining = (data.memberIds ?? []).filter((id) => id !== userId);
+  await updateDoc(ref, { memberIds: remaining });
+}
+
+// Delete the user's own profile doc + detach from household. Auth user is
+// deleted separately (client-side) by deleteCurrentUser().
+export async function deleteUserData(
+  userId: string,
+  householdId: string | null,
+): Promise<void> {
+  if (householdId) {
+    await leaveHousehold(householdId, userId).catch(() => {});
+  }
+  await deleteDoc(doc(db, 'users', userId)).catch(() => {});
+}
+
 export async function getHousehold(householdId: string): Promise<Household | null> {
   const snap = await getDoc(doc(db, 'households', householdId));
   if (!snap.exists()) return null;
@@ -269,7 +340,8 @@ export async function getHouseholdMembers(householdId: string): Promise<User[]> 
   if (!household) return [];
   const members: User[] = [];
   for (const uid of household.memberIds) {
-    const profile = await getUserProfile(uid);
+    // One unreadable/missing member must not fail the entire list
+    const profile = await getUserProfile(uid).catch(() => null);
     if (profile) members.push(profile);
   }
   return members;
