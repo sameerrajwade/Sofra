@@ -81,8 +81,10 @@ section.plain { border-top: none; }
 .screen .body li { margin: 7px 0; }
 
 /* gallery */
-.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 22px; }
+.gallery figure { margin: 0; }
 .gallery img { width: 100%; border-radius: 16px; border: 1px solid var(--line); box-shadow: var(--shadow); }
+.gallery figcaption { margin-top: 10px; font-size: 13px; font-weight: 500; color: var(--faint); text-align: center; }
 
 /* callout / band */
 .band { background: var(--band); border-radius: 20px; padding: 32px 34px; }
