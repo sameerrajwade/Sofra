@@ -30,6 +30,8 @@ import { onAuthStateChanged } from './src/services/auth';
 import { getUserProfile } from './src/services/firestore';
 import { useAuthStore } from './src/stores/useAuthStore';
 import { useHouseholdStore } from './src/stores/useHouseholdStore';
+import { useMealStore } from './src/stores/useMealStore';
+import { useDishStore } from './src/stores/useDishStore';
 import * as Notifications from 'expo-notifications';
 import { useThemeStore } from './src/stores/useThemeStore';
 import { useNotificationStore } from './src/stores/useNotificationStore';
@@ -165,14 +167,14 @@ export default function App() {
           // single, in-sync copy (screens must NOT refetch prefs on focus — that
           // would clobber in-memory edits like toggling a meal type off).
           if (resolvedUser.householdId) {
-            useHouseholdStore
-              .getState()
-              .fetchHousehold(resolvedUser.householdId, resolvedUser.id)
-              .catch(() => {});
-          }
-          // Run once-per-device migration to title-case existing dish names
-          if (resolvedUser.householdId) {
-            migrateDishNamesToTitleCase(resolvedUser.householdId).catch(() => {});
+            const hh = resolvedUser.householdId;
+            useHouseholdStore.getState().fetchHousehold(hh, resolvedUser.id).catch(() => {});
+            // Warm the meal + dish caches once at startup. Every screen then reads
+            // from memory for the rest of the session (no per-screen re-reads).
+            useMealStore.getState().loadMeals(hh).catch(() => {});
+            useDishStore.getState().fetchDishes(hh).catch(() => {});
+            // Run once-per-device migration to title-case existing dish names
+            migrateDishNamesToTitleCase(hh).catch(() => {});
           }
         } else {
           setUser(null);

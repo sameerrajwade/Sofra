@@ -65,7 +65,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const loadData = useCallback(async (force = false) => {
     if (!householdId) return;
-    await Promise.all([fetchMeals(householdId, prevMonthStart, today, force), fetchDishes(householdId)]);
+    await Promise.all([fetchMeals(householdId, prevMonthStart, today, force), fetchDishes(householdId, force)]);
     // Heal any duplicate meal docs so Home matches Calendar/Plan (which dedupe too).
     await dedupeMeals(householdId).catch(() => {});
   }, [householdId, prevMonthStart, today, fetchMeals, fetchDishes, dedupeMeals]);

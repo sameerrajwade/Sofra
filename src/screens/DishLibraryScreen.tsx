@@ -175,9 +175,9 @@ export const DishLibraryScreen: React.FC = () => {
   const onRefresh = useCallback(async () => {
     if (!householdId) return;
     setRefreshing(true);
-    await fetchDishes(householdId);
+    await Promise.all([fetchDishes(householdId, true), fetchAllMeals(householdId, true)]);
     setRefreshing(false);
-  }, [householdId, fetchDishes]);
+  }, [householdId, fetchDishes, fetchAllMeals]);
 
   const toggleFavorite = useCallback(
     async (dish: Dish) => {
