@@ -77,11 +77,17 @@ export const DishLibraryScreen: React.FC = () => {
 
   const allDishes = useMemo(() => {
     const dishMap = new Map<string, Dish>();
+    // Local 'yyyy-MM-dd' for today; meal.date is stored as a local date string.
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     // Seed from saved dishes but reset counts — timesCooked/lastCookedDate are
     // DERIVED from meals below (fixes DISH-COUNT-2: stored + derived double count).
     dishes.forEach((d) => dishMap.set(d.name.toLowerCase(), { ...d, timesCooked: 0, lastCookedDate: '' }));
     meals.forEach((m) => {
       if (!m.dishName) return;
+      // Future-planned meals aren't cooked yet — exclude them from stats so an
+      // upcoming dish doesn't skew "last made" / counts (bug: future date won).
+      if (m.date > today) return;
       const key = m.dishName.toLowerCase();
       if (dishMap.has(key)) {
         const existing = dishMap.get(key)!;

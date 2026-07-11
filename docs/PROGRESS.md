@@ -11,12 +11,23 @@ Family meal-planning app (React Native / Expo + Firebase, TypeScript). Rebranded
 - Paywall + monetization DEFERRED, not in MVP1.
 - Develop → test → show results → only then build/deliver.
 
-## Last Session
-Shipped 6 UX fixes + 4 follow-ups (tsc=0, 14/14 Jest pass); built + installed debug-signed release APK on device 57150DLCH002E1 over wireless ADB; verified on device via adb screencap.
-First 6: (1) "Add side dish"→"Add a dish"; (2) MealCard lists all dishes by name (was "+N more") [verified]; (3) share exports actual PNG card via expo-sharing; (4) Home "Kids Tiffins" card shows unique count + taps into kids-only DishLibrary subset [verified]; (5) kids tiffin fully suppressed on Sat/Sun even with toggle on; (6) History/DishLibrary dates use local time not UTC.
-Follow-ups (2026-07-09 pt2): (7) Home todayTypes now excludes kids meals — a kids breakfast was spawning a phantom empty "Breakfast" family slot on Home (Calendar already filtered kids); (8) AddMeal getDefaultMealType respects enabled meal types (no more auto-breakfast before 11am); (9) MealTypeToggle shows only enabled types (+ selected); (10) AddMeal home "sides" relabeled "Main dish" + "More dishes in this meal" with a food icon so they don't read like a comment field. Rebuild in progress. Logged NOTIF-DEEPLINK-1/2 (MVP2).
+## Open PRs (2026-07-09)
+- **PR #2 (MERGED)** — 14 UX/device-test fixes (dish labels, all-dishes cards, image share, kids-weekends, breakfast fixes, dedupe, splash, skeletons, celebration).
+- **PR #3 (open)** — GitHub Pages site: 9-screen gallery + 7-screen guide (login/register/celebration) + status-bar-cropped clean screenshots + share = card-only. Pages serves main/docs; merge to publish.
+- **PR #4 (open)** — Firestore read reduction (this session).
 
-All 10 fixes verified on-device via ADB screencap (incl. share sheet showing "Sharing image" + the real PNG card). Pushed branch ux-improvements-jul9 → PR #2 (https://github.com/sameerrajwade/Sofra/pull/2). Logged Sameer OUT of the app for onboarding-screen captures (he must re-login via Google himself).
+## Last Session — Firestore read reduction (branch reads-cache-first / PR #4)
+Meals + dishes now **cache-first single-source**: load ALL once per household/session, every screen filters in memory, writes update memory locally (same-phone edits show instantly everywhere, 0 reads), re-read only on pull-to-refresh or household change. Removed 20s TTL + write-invalidation; coalesced concurrent loads; App.tsx warms caches at startup. No onSnapshot by design (user OK with cross-device refresh). New useMealStore.test.ts (5 tests) locks it. tsc=0, 19/19 Jest. Effect: ~2-3k reads/day → ~1 getAllMeals+getDishes per launch/refresh, flat. Built RELEASE APK (assembleRelease, standalone) + installed on device 57150DLCH002E1; copied to C:\Users\samee\Downloads\Sofra-beta.apk for Sameer to share with wife via Google Drive (chose private Drive over a public GitHub release). PAUSED: Sameer monitors Firebase read count tomorrow (2026-07-11) to confirm the drop; if good → move to release.
+
+## Bug fix (2026-07-10, branch reads-cache-first, tsc=0)
+- FUTURE-DISH-STAT: DishLibrary "unique dishes" derived `lastCookedDate` as the MAX of ALL meal dates incl. future-planned ones, so an upcoming dish (e.g. Upma next Sunday) beat the real last-cooked date and skewed "Xd ago" + counts. Fixed by skipping meals with `m.date > today` (local yyyy-MM-dd) in DishLibraryScreen allDishes aggregation.
+
+## Next Up
+1. **Tomorrow: confirm read count dropped** in Firebase console (target: from ~2-3k/day toward a few hundred). If wife's install works + reads look good → green-light release path.
+2. Merge PR #3 (site) + PR #4 (reads) to main.
+3. Release path: Play **Internal testing** (instant Play install, up to 100 testers) OR closed beta (12 testers/14 days → production); org account w/ D-U-N-S skips the gate. Prep: data-safety form, store listing, signed AAB via EAS.
+4. Reads Tier 3 (only before large histories / scaling): denormalized stats docs + optional ~12-mo load cap; enable Firebase App Check.
+5. Backlog: NOTIF-DEEPLINK MVP2; icon/splash PNG regen; crash reporting (Sentry vs Crashlytics); deploy+verify Firestore/Storage rules in prod.
 
 ## Device-test findings — ALL FIXED (2026-07-09 pt3, phased, tsc=0/14 tests)
 - DUPMEAL: Home now runs dedupeMeals on load + picks newest record per slot (matches Calendar/Plan) → no more Home/Calendar divergence.
