@@ -240,7 +240,10 @@ export const AddMealScreen: React.FC<Props> = ({ route, navigation }) => {
         notes: notes.trim() || '',
         audience,
         ...(isOutside && cleanItems.length > 0 ? { items: cleanItems } : {}),
-        ...(!isOutside && homeItems.length > 1 ? { items: homeItems } : {}),
+        // Always persist the full dish list for home meals (even a single dish).
+        // Omitting it on edit left a stale multi-dish `items` array in storage,
+        // so a removed side kept reappearing on Home/Calendar (merge-only update).
+        ...(!isOutside && homeItems.length > 0 ? { items: homeItems } : {}),
       };
 
       // Persist per-dish star ratings onto the restaurant ("what to take/avoid").

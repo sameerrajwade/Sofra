@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { Meal } from '../types';
 import {
-  getMealsByDateRange,
-  getMealsByDate,
-  getMealsForMonth,
   getAllMeals,
   addMeal as addMealApi,
   updateMeal as updateMealApi,
@@ -14,28 +11,30 @@ import {
 } from '../services/firestore';
 import { useDishStore } from './useDishStore';
 
-// ── Read-cost guard ──────────────────────────────────────────────
-// Screens re-fetch meals on every focus; without this, tab-hopping re-reads the
-// whole collection each time. We skip a network read if the same query ran very
-// recently (mutations clear the cache; pull-to-refresh passes force=true).
-const FETCH_TTL_MS = 20000;
-const fetchTimes = new Map<string, number>();
-const isFresh = (key: string) => {
-  const t = fetchTimes.get(key);
-  return t !== undefined && Date.now() - t < FETCH_TTL_MS;
-};
-const touch = (key: string) => fetchTimes.set(key, Date.now());
-const invalidateFetchCache = () => fetchTimes.clear();
+// ── Single-source, cache-first meal store ─────────────────────────────────
+// The household's meals are loaded ONCE per session (cold start or explicit
+// pull-to-refresh) and held in memory. Every screen reads and filters from this
+// one array, so navigating between tabs costs ZERO Firestore reads. Writes on
+// this device update the in-memory array locally, so a meal added/edited on one
+// screen shows instantly on every other screen — again with no read. Changes
+// made on a *different* device appear on the next pull-to-refresh (force=true).
+// This is the cheapest read profile short of a live onSnapshot listener, which
+// we intentionally avoid (it would keep billing reads for real-time sync we
+// don't need for a single-phone experience).
 
 interface MealState {
   meals: Meal[];
+  hydratedFor: string | null; // householdId the in-memory meals belong to
   isLoading: boolean;
   error: string | null;
-  fetchMeals: (householdId: string, startDate: string, endDate: string, force?: boolean) => Promise<void>;
+  loadMeals: (householdId: string, force?: boolean) => Promise<void>;
+  // Back-compat aliases — every screen's fetch resolves to the one cache-first
+  // load (range/date args are ignored; screens filter the full set in memory).
+  fetchMeals: (householdId: string, startDate?: string, endDate?: string, force?: boolean) => Promise<void>;
   fetchAllMeals: (householdId: string, force?: boolean) => Promise<void>;
-  fetchMealsByDateRange: (householdId: string, start: string, end: string, force?: boolean) => Promise<void>;
-  fetchMealsByDate: (householdId: string, date: string) => Promise<void>;
-  fetchMealsForMonth: (householdId: string, year: number, month: number) => Promise<void>;
+  fetchMealsByDateRange: (householdId: string, start?: string, end?: string, force?: boolean) => Promise<void>;
+  fetchMealsByDate: (householdId: string) => Promise<void>;
+  fetchMealsForMonth: (householdId: string) => Promise<void>;
   addMeal: (
     householdId: string,
     meal: Omit<Meal, 'id' | 'createdAt' | 'updatedAt'>,
@@ -48,221 +47,165 @@ interface MealState {
   clear: () => void;
 }
 
-export const useMealStore = create<MealState>((set, get) => ({
-  meals: [],
-  isLoading: false,
-  error: null,
+export const useMealStore = create<MealState>((set, get) => {
+  // Coalesces concurrent loads (e.g. the startup preload + Home's first focus)
+  // into a single network read instead of racing two.
+  let inFlight: { householdId: string; promise: Promise<void> } | null = null;
 
-  fetchMeals: async (householdId, startDate, endDate, force = false) => {
-    const key = `range:${householdId}:${startDate}:${endDate}`;
-    if (!force && isFresh(key)) return;
-    set({ isLoading: true, error: null });
-    try {
-      const fetched = await getMealsByDateRange(householdId, startDate, endDate);
-      touch(key);
-      set((state) => {
-        // Reconcile the window: drop in-memory meals inside [start,end] that
-        // weren't returned (evicts docs deleted in Firestore); keep the rest.
-        const outside = state.meals.filter(
-          (m) => m.date < startDate || m.date > endDate,
-        );
-        return { meals: [...outside, ...fetched], isLoading: false };
-      });
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-    }
-  },
+  // The one place a meal read hits the network.
+  const load = async (householdId: string, force = false): Promise<void> => {
+    if (!householdId) return;
+    // Cache-first: skip the read entirely if we already hold this household's
+    // meals in memory and the caller didn't explicitly ask to refresh.
+    if (!force && get().hydratedFor === householdId) return;
+    if (!force && inFlight && inFlight.householdId === householdId) return inFlight.promise;
+    const promise = (async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const meals = await getAllMeals(householdId);
+        set({ meals, hydratedFor: householdId, isLoading: false });
+      } catch (e: any) {
+        set({ error: e.message, isLoading: false });
+      } finally {
+        inFlight = null;
+      }
+    })();
+    inFlight = { householdId, promise };
+    return promise;
+  };
 
-  fetchAllMeals: async (householdId, force = false) => {
-    const key = `all:${householdId}`;
-    if (!force && isFresh(key)) return;
-    set({ isLoading: true, error: null });
-    try {
-      const fetched = await getAllMeals(householdId);
-      touch(key);
-      // Full fetch is authoritative — replace entirely so deletions propagate.
-      set({ meals: fetched, isLoading: false });
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-    }
-  },
+  return {
+    meals: [],
+    hydratedFor: null,
+    isLoading: false,
+    error: null,
 
-  fetchMealsByDateRange: async (householdId, start, end, force = false) => {
-    const key = `range:${householdId}:${start}:${end}`;
-    if (!force && isFresh(key)) return;
-    set({ isLoading: true, error: null });
-    try {
-      const fetched = await getMealsByDateRange(householdId, start, end);
-      touch(key);
-      set((state) => {
-        const outside = state.meals.filter((m) => m.date < start || m.date > end);
-        return { meals: [...outside, ...fetched], isLoading: false };
-      });
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-    }
-  },
+    loadMeals: load,
+    fetchMeals: (householdId, _s, _e, force) => load(householdId, force),
+    fetchAllMeals: (householdId, force) => load(householdId, force),
+    fetchMealsByDateRange: (householdId, _s, _e, force) => load(householdId, force),
+    fetchMealsByDate: (householdId) => load(householdId),
+    fetchMealsForMonth: (householdId) => load(householdId),
 
-  fetchMealsByDate: async (householdId, date) => {
-    set({ isLoading: true, error: null });
-    try {
-      const fetched = await getMealsByDate(householdId, date);
-      set((state) => {
-        const other = state.meals.filter((m) => m.date !== date);
-        return { meals: [...other, ...fetched], isLoading: false };
-      });
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-    }
-  },
+    addMeal: async (householdId, meal, opts) => {
+      const trackStats = opts?.trackStats !== false; // default true
+      set({ error: null });
+      try {
+        const id = await addMealApi(householdId, meal);
+        const newMeal: Meal = {
+          ...meal,
+          id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        // Local update → every screen reflects it immediately, no re-read.
+        set((state) => ({ meals: [...state.meals, newMeal] }));
 
-  fetchMealsForMonth: async (householdId, year, month) => {
-    set({ isLoading: true, error: null });
-    try {
-      const fetched = await getMealsForMonth(householdId, year, month);
-      set((state) => {
-        const existing = new Map(state.meals.map((m) => [m.id, m]));
-        for (const meal of fetched) {
-          existing.set(meal.id, meal);
+        // Bulk/plan writes skip stored-aggregate updates (screens derive from
+        // meals); avoids inflating timesCooked / restaurant visits on re-accept.
+        if (!trackStats) {
+          return id;
         }
-        return { meals: Array.from(existing.values()), isLoading: false };
-      });
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-    }
-  },
 
-  addMeal: async (householdId, meal, opts) => {
-    const trackStats = opts?.trackStats !== false; // default true
-    set({ isLoading: true, error: null });
-    try {
-      const id = await addMealApi(householdId, meal);
-      const newMeal: Meal = {
-        ...meal,
-        id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      set((state) => ({
-        meals: [...state.meals, newMeal],
-        isLoading: false,
-      }));
-      invalidateFetchCache();
+        // Update dish stats (fire-and-forget)
+        try {
+          const dish = await getDishByName(householdId, meal.dishName);
+          if (dish) {
+            await incrementDishCount(householdId, dish.id, meal.date);
+            useDishStore.setState((state) => ({
+              dishes: state.dishes.map((d) =>
+                d.id === dish.id
+                  ? { ...d, timesCooked: d.timesCooked + 1, lastCookedDate: meal.date }
+                  : d,
+              ),
+            }));
+          }
+        } catch {
+          // Non-critical: don't block meal save
+        }
 
-      // Bulk/plan writes skip stored-aggregate updates (screens derive from meals);
-      // avoids inflating timesCooked / restaurant visits on plan re-accept.
-      if (!trackStats) {
+        // Update restaurant stats for outside meals (fire-and-forget)
+        try {
+          const isOutside = meal.sourceType === 'takeout' || meal.sourceType === 'dineout';
+          if (isOutside && meal.restaurantName) {
+            await addOrUpdateRestaurant(
+              householdId,
+              meal.restaurantName,
+              meal.cuisineTag ?? '',
+              meal.cost ?? 0,
+              meal.date,
+            );
+          }
+        } catch {
+          // Non-critical
+        }
+
         return id;
+      } catch (e: any) {
+        set({ error: e.message });
+        throw e;
       }
+    },
 
-      // Update dish stats (fire-and-forget)
+    updateMeal: async (householdId, mealId, data) => {
+      set({ error: null });
       try {
-        const dish = await getDishByName(householdId, meal.dishName);
-        if (dish) {
-          await incrementDishCount(householdId, dish.id, meal.date);
-          // Sync local dish store
-          useDishStore.setState((state) => ({
-            dishes: state.dishes.map((d) =>
-              d.id === dish.id
-                ? { ...d, timesCooked: d.timesCooked + 1, lastCookedDate: meal.date }
-                : d,
-            ),
-          }));
-        }
-      } catch {
-        // Non-critical: don't block meal save
+        await updateMealApi(householdId, mealId, data);
+        set((state) => ({
+          meals: state.meals.map((m) =>
+            m.id === mealId ? { ...m, ...data, updatedAt: new Date() } : m,
+          ),
+        }));
+      } catch (e: any) {
+        set({ error: e.message });
+        throw e;
       }
+    },
 
-      // Update restaurant stats for outside meals (fire-and-forget)
+    deleteMeal: async (householdId, mealId) => {
+      set({ error: null });
       try {
-        const isOutside = meal.sourceType === 'takeout' || meal.sourceType === 'dineout';
-        if (isOutside && meal.restaurantName) {
-          await addOrUpdateRestaurant(
-            householdId,
-            meal.restaurantName,
-            meal.cuisineTag ?? '',
-            meal.cost ?? 0,
-            meal.date,
-          );
+        await deleteMealApi(householdId, mealId);
+        set((state) => ({ meals: state.meals.filter((m) => m.id !== mealId) }));
+      } catch (e: any) {
+        set({ error: e.message });
+        throw e;
+      }
+    },
+
+    // Enforce one meal per (date, mealType, audience): keep the most recently
+    // updated record, delete the rest from Firestore. Heals duplicate docs left
+    // by earlier bugs. Operates on the in-memory set (no extra reads).
+    dedupeMeals: async (householdId) => {
+      const current = get().meals;
+      const keepBySlot = new Map<string, Meal>();
+      const toDelete: string[] = [];
+      for (const m of current) {
+        const key = `${m.date}|${m.mealType}|${m.audience ?? 'family'}`;
+        const existing = keepBySlot.get(key);
+        if (!existing) {
+          keepBySlot.set(key, m);
+          continue;
         }
-      } catch {
-        // Non-critical
+        const mTime = m.updatedAt?.getTime?.() ?? 0;
+        const eTime = existing.updatedAt?.getTime?.() ?? 0;
+        const keep = mTime >= eTime ? m : existing;
+        const drop = keep === m ? existing : m;
+        keepBySlot.set(key, keep);
+        toDelete.push(drop.id);
       }
+      if (toDelete.length === 0) return;
+      const deleteSet = new Set(toDelete);
+      await Promise.all(
+        toDelete.map((id) => deleteMealApi(householdId, id).catch(() => {})),
+      );
+      set((state) => ({ meals: state.meals.filter((m) => !deleteSet.has(m.id)) }));
+    },
 
-      return id;
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-      throw e;
-    }
-  },
+    getMealsByDate: (date) => get().meals.filter((m) => m.date === date),
 
-  updateMeal: async (householdId, mealId, data) => {
-    set({ isLoading: true, error: null });
-    try {
-      await updateMealApi(householdId, mealId, data);
-      set((state) => ({
-        meals: state.meals.map((m) =>
-          m.id === mealId ? { ...m, ...data, updatedAt: new Date() } : m,
-        ),
-        isLoading: false,
-      }));
-      invalidateFetchCache();
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-      throw e;
-    }
-  },
-
-  deleteMeal: async (householdId, mealId) => {
-    set({ isLoading: true, error: null });
-    try {
-      await deleteMealApi(householdId, mealId);
-      set((state) => ({
-        meals: state.meals.filter((m) => m.id !== mealId),
-        isLoading: false,
-      }));
-      invalidateFetchCache();
-    } catch (e: any) {
-      set({ error: e.message, isLoading: false });
-      throw e;
-    }
-  },
-
-  // Enforce one meal per (date, mealType): keep the most recently updated record,
-  // delete the rest from Firestore. Heals duplicate docs left by earlier bugs.
-  dedupeMeals: async (householdId) => {
-    const current = get().meals;
-    const keepBySlot = new Map<string, Meal>();
-    const toDelete: string[] = [];
-    for (const m of current) {
-      // Include audience so a family meal and a kids tiffin in the same
-      // date+type slot aren't treated as duplicates of each other.
-      const key = `${m.date}|${m.mealType}|${m.audience ?? 'family'}`;
-      const existing = keepBySlot.get(key);
-      if (!existing) {
-        keepBySlot.set(key, m);
-        continue;
-      }
-      const mTime = m.updatedAt?.getTime?.() ?? 0;
-      const eTime = existing.updatedAt?.getTime?.() ?? 0;
-      const keep = mTime >= eTime ? m : existing;
-      const drop = keep === m ? existing : m;
-      keepBySlot.set(key, keep);
-      toDelete.push(drop.id);
-    }
-    if (toDelete.length === 0) return;
-    const deleteSet = new Set(toDelete);
-    await Promise.all(
-      toDelete.map((id) => deleteMealApi(householdId, id).catch(() => {})),
-    );
-    set((state) => ({ meals: state.meals.filter((m) => !deleteSet.has(m.id)) }));
-  },
-
-  getMealsByDate: (date) => {
-    return get().meals.filter((m) => m.date === date);
-  },
-
-  clear: () => set({ meals: [], isLoading: false, error: null }),
-}));
+    clear: () => set({ meals: [], hydratedFor: null, isLoading: false, error: null }),
+  };
+});
 
 export default useMealStore;
