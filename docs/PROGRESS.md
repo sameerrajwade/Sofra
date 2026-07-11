@@ -19,8 +19,11 @@ Family meal-planning app (React Native / Expo + Firebase, TypeScript). Rebranded
 ## Last Session — Firestore read reduction (branch reads-cache-first / PR #4)
 Meals + dishes now **cache-first single-source**: load ALL once per household/session, every screen filters in memory, writes update memory locally (same-phone edits show instantly everywhere, 0 reads), re-read only on pull-to-refresh or household change. Removed 20s TTL + write-invalidation; coalesced concurrent loads; App.tsx warms caches at startup. No onSnapshot by design (user OK with cross-device refresh). New useMealStore.test.ts (5 tests) locks it. tsc=0, 19/19 Jest. Effect: ~2-3k reads/day → ~1 getAllMeals+getDishes per launch/refresh, flat. Built RELEASE APK (assembleRelease, standalone) + installed on device 57150DLCH002E1; copied to C:\Users\samee\Downloads\Sofra-beta.apk for Sameer to share with wife via Google Drive (chose private Drive over a public GitHub release). PAUSED: Sameer monitors Firebase read count tomorrow (2026-07-11) to confirm the drop; if good → move to release.
 
-## Bug fix (2026-07-10, branch reads-cache-first, tsc=0)
-- FUTURE-DISH-STAT: DishLibrary "unique dishes" derived `lastCookedDate` as the MAX of ALL meal dates incl. future-planned ones, so an upcoming dish (e.g. Upma next Sunday) beat the real last-cooked date and skewed "Xd ago" + counts. Fixed by skipping meals with `m.date > today` (local yyyy-MM-dd) in DishLibraryScreen allDishes aggregation.
+## Bug fixes (2026-07-10, branch reads-cache-first, tsc=0)
+- FUTURE-DISH-STAT: DishLibrary "unique dishes" derived `lastCookedDate` as the MAX of ALL meal dates incl. future-planned ones, so an upcoming dish (e.g. Upma next Sunday) beat the real last-cooked date and skewed "Xd ago" + counts. Fixed by skipping meals with `m.date > today` (local yyyy-MM-dd) in DishLibraryScreen allDishes aggregation. (commit 98e6420)
+- EXTRA-DISH-DELETE: Removing an added side from a home meal didn't persist — AddMealScreen only wrote `items` when >1 dish, so reducing to a single dish dropped the key and the merge-only Firestore/store update left the stale array; the removed dish reappeared on Home/Calendar. Fixed: home meals always persist `items` (len>0). (commit bdc7370)
+- Added top-level README.md (overview, features, stack, architecture, setup/build). (commit 31e7057)
+- IN PROGRESS this session: building release APK (assembleRelease) → install on device 57150DLCH002E1 → push branch → open PR → merge to main.
 
 ## Next Up
 1. **Tomorrow: confirm read count dropped** in Firebase console (target: from ~2-3k/day toward a few hundred). If wife's install works + reads look good → green-light release path.
